@@ -3,8 +3,8 @@ import type {Metadata} from 'next'
 import {Providers} from "@/app/providers"
 
 export const metadata: Metadata = {
-    title: 'Dobrozem',
-    description: 'Dobrozem'
+    title: 'FarmLand',
+    description: 'FarmLand'
 }
 
 export default function RootLayout({
