@@ -4,7 +4,11 @@ import Button from "@/app/components/Button"
 import TextBox from "@/app/components/TextBox"
 import React, {ChangeEvent, useState} from "react"
 import {signIn} from "next-auth/react"
-import {FormValues} from "@/types/types"
+
+type FormValues = {
+    email: string
+    password: string
+}
 
 export default function Register() {
     const [formValues, setFormValues] = useState<FormValues>({

@@ -5,7 +5,11 @@ import TextBox from "@/app/components/TextBox"
 import {signIn} from "next-auth/react"
 import React, {ChangeEvent, useState} from "react"
 import {useRouter} from "next/navigation"
-import {FormValues} from "@/types/types"
+
+type FormValues = {
+    email: string
+    password: string
+}
 
 export default function Login() {
     const router = useRouter()
