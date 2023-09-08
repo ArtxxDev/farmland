@@ -5,7 +5,7 @@ import TextBox from "@/app/components/TextBox"
 import {signIn} from "next-auth/react"
 import React, {ChangeEvent, useState} from "react"
 import {useRouter} from "next/navigation"
-import type {FormValues} from "@/types/types"
+import {FormValues} from "@/types/types"
 
 export default function Login() {
     const router = useRouter()
