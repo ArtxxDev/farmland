@@ -5,14 +5,11 @@ import TextBox from "@/app/components/TextBox"
 import {signIn} from "next-auth/react"
 import React, {ChangeEvent, useState} from "react"
 import {useRouter} from "next/navigation"
-// import {z} from "zod"
-// import {FormDataSchema} from "@/constants/formDataSchema"
-//
-// type Inputs = z.infer<typeof FormDataSchema>
+import type {FormValues} from "@/types/types"
 
-const LoginPage = () => {
+export default function Login() {
     const router = useRouter()
-    const [formValues, setFormValues] = useState({
+    const [formValues, setFormValues] = useState<FormValues>({
         email: "",
         password: "",
     })
@@ -45,7 +42,7 @@ const LoginPage = () => {
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
         const { name, value } = event.target;
         setFormValues({ ...formValues, [name]: value });
-    };
+    }
 
     return (
         <form onSubmit={onSubmit}>
@@ -79,6 +76,4 @@ const LoginPage = () => {
             </div>
         </form>
     );
-};
-
-export default LoginPage;
+}
