@@ -128,11 +128,6 @@ export default function Table() {
         //         children: "Error loading data",
         //     }
         //     : undefined,
-        mantineTableContainerProps: {
-            sx: {
-                minHeight: "500px",
-            },
-        },
         displayColumnDefOptions: {
             'mrt-row-actions': {
                 header: '',
