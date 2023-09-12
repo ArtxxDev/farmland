@@ -20,8 +20,6 @@ export default function Dashboard() {
 
     return (
         <div>
-            <h1>Email: {JSON.stringify(session.data?.user.email)}</h1>
-            <h1>Role: {JSON.stringify(session.data?.user.role)}</h1>
             <table>
                 <thead>
                 <tr>
