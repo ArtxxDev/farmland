@@ -1,9 +1,9 @@
 "use client"
 
 import Button from "@/app/components/Button"
-import TextBox from "@/app/components/TextBox"
 import React, {ChangeEvent, useState} from "react"
 import {signIn} from "next-auth/react"
+import Input from "@/app/components/Input";
 
 type FormValues = {
     email: string
@@ -47,34 +47,46 @@ export default function Register() {
         setFormValues({...formValues, [name]: value});
     }
 
-
     return (
-        <form onSubmit={onSubmit}>
-            <div className={
-                "flex flex-col justify-center items-center  h-screen bg-gradient-to-br gap-1 from-cyan-300 to-sky-600"
-            }
+        <div className="relative overflow-hidden bg-cover bg-no-repeat p-12 h-screen w-screen"
+             style={{backgroundImage: 'url("/bg.jpg")'}}
+        >
+            <div
+                className="absolute bottom-0 left-0 right-0 top-0 h-full w-full overflow-hidden bg-fixed flex items-center justify-center"
+                style={{backgroundColor: "rgba(0, 0, 0, 0.65"}}
             >
                 {error && (
                     <p className="text-center bg-red-300 py-4 px-5 mb-6 rounded">{error}</p>
                 )}
-                <div className="px-7 py-4 shadow bg-white rounded-md flex flex-col gap-2">
-                    <TextBox
-                        labelText="Електронна пошта"
-                        type="email"
-                        name="email"
-                        value={formValues.email}
-                        onChange={handleChange}
-                    />
-                    <TextBox
-                        labelText="Пароль"
-                        type="password"
-                        name="password"
-                        value={formValues.password}
-                        onChange={handleChange}
-                    />
-                    <Button type="submit">Зареєструватися</Button>
+                <div
+                    className="authForm border-t-8 rounded-sm border-indigo-600 bg-white pb-10 pt-6 px-12 shadow-3xl w-96">
+                    <h2 className="font-bold text-center block text-2xl">Реєстрація</h2>
+                    <form onSubmit={onSubmit}>
+                        <Input
+                            required
+                            type="email"
+                            id="email"
+                            name="email"
+                            label="Електронна пошта"
+                            placeholder="email@example.com"
+                            autofocus={true}
+                            value={formValues.email}
+                            onChange={handleChange}
+                        />
+                        <Input
+                            required
+                            type="password"
+                            id="password"
+                            name="password"
+                            label="Пароль"
+                            placeholder="••••••••••"
+                            value={formValues.password}
+                            onChange={handleChange}
+                        />
+                        <Button value="submit">Зареєструватися</Button>
+                    </form>
                 </div>
             </div>
-        </form>
-    );
+        </div>
+    )
 }

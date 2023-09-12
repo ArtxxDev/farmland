@@ -1,7 +1,53 @@
-import {useSession} from "next-auth/react"
-import {getServerSession} from "next-auth"
-import authOptions from "@/app/api/auth/[...nextauth]/options"
+"use client"
 
-export default async function Dashboard() {
-    return <>Dashboard</>
+import {useSession} from "next-auth/react"
+import {getUsers} from "@/app/utils/clientRequests"
+import {useEffect, useState} from "react"
+import {User} from "@prisma/client"
+
+export default function Dashboard() {
+    const [users, setUsers] = useState<User[]>([])
+    const session = useSession()
+
+    useEffect(() => {
+        async function fetchData() {
+            const data = await getUsers()
+            setUsers(data)
+        }
+
+        fetchData()
+    }, [])
+
+    return (
+        <div>
+            <h1>Email: {JSON.stringify(session.data?.user.email)}</h1>
+            <h1>Role: {JSON.stringify(session.data?.user.role)}</h1>
+            <table>
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>EMAIL</th>
+                    <th>ROLE</th>
+                </tr>
+                </thead>
+                <tbody>
+                {users ? (
+                    Object.values(users)?.map((user: User) => (
+                        <tr key={user?.id}>
+                            <td>{user?.id}</td>
+                            <td>{user?.email}</td>
+                            <td>{user?.role}</td>
+                            <td>O X</td>
+                        </tr>
+                    ))
+                ) : (
+                    <tr>
+                        <td>N/A</td>
+                    </tr>
+                )}
+                </tbody>
+            </table>
+        </div>
+
+    )
 }

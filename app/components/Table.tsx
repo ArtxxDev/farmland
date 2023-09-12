@@ -1,98 +1,153 @@
-"use client";
+"use client"
 
-import React, {useEffect, useMemo, useState} from "react";
+import React, {useEffect, useMemo, useState} from "react"
 import {
     MantineReactTable,
     type MRT_ColumnDef, MRT_Row,
     MRT_RowSelectionState,
     MRT_TableOptions,
     useMantineReactTable
-} from "mantine-react-table";
-import {ActionIcon, Button, Flex, MantineProvider, Tooltip, useMantineTheme} from "@mantine/core";
-import {columnsData} from "@/constants/columns";
-import {getTable} from "@/app/utils/getTable";
+} from "mantine-react-table"
+import {ActionIcon, Box, Button, MantineProvider, Stack} from "@mantine/core"
+import {getTable} from "@/app/utils/clientRequests"
 
 export default function Table() {
     const [tableData, setTableData] = useState([]);
     const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
     const [validationErrors, setValidationErrors] = useState<
         Record<string, string | undefined>
-    >({});
+    >({})
 
     useEffect(() => {
         async function fetchData() {
-            const data = await getTable();
-            setTableData(data);
+            const data = await getTable()
+            setTableData(data)
         }
 
-        fetchData();
-    }, []);
+        fetchData()
+    }, [])
 
-    //CREATE action
-    // const handleCreateUser: MRT_TableOptions<TableData>["onCreatingRowSave"] = async ({values, exitCreatingMode}) => {
-    //     const newValidationErrors = validateUser(values);
-    //     if (Object.values(newValidationErrors).some((error) => error)) {
-    //         setValidationErrors(newValidationErrors);
-    //         return;
-    //     }
-    //     setValidationErrors({});
-    //     await createUser(values);
-    //     exitCreatingMode();
-    // };
 
-    // const handleSaveUser: MRT_TableOptions<TableData>["onEditingRowSave"] = async ({values, table}) => {
-    //     const newValidationErrors = validateUser(values);
-    //     if (Object.values(newValidationErrors).some((error) => error)) {
-    //         setValidationErrors(newValidationErrors);
-    //         return;
-    //     }
-    //     setValidationErrors({});
-    //     await updateUser(values);
-    //     table.setEditingRow(null); //exit editing mode
-    // };
+    const totalNGO = useMemo(
+        // @ts-ignore
+        () => tableData.reduce((acc, curr) => acc + curr.ngo, 0),
+        [tableData]
+    )
 
-    //DELETE action
-    // const openDeleteConfirmModal = (row: MRT_Row<TableData>) =>
-    //     modals.openConfirmModal({
-    //         title: "Ви впевнені що хочете видалити цей запис?",
-    //         children: (
-    //             <Text>
-    //                 Are you sure you want to delete {row.original.firstName}{" "}
-    //                 {row.original.lastName}? This action cannot be undone.
-    //             </Text>
-    //         ),
-    //         labels: {confirm: "Delete", cancel: "Cancel"},
-    //         confirmProps: {color: "red"},
-    //         onConfirm: () => deleteUser(row.original.id),
-    //     });
+    const columns = useMemo(() => [
+        {
+            header: "Область",
+            accessorKey: "oblast",
+            filterVariant: "multi-select",
+        },
+        {
+            header: "Район",
+            accessorKey: "region",
+            filterVariant: "multi-select",
+        },
+        {
+            header: "Кадастровий номер",
+            accessorKey: "cadastral",
+            size: 200,
+        },
+        {
+            header: "Склад узгідь",
+            accessorKey: "composition",
+            filterVariant: "multi-select",
+        },
+        {
+            accessorKey: "area",
+            header: "Площа ділянки",
+            filterVariant: "range-slider",
+            mantineFilterRangeSliderProps: {
+                size: "lg",
+                precision: 4,
+                minRange: 0.1,
+                step: 0.1,
+                min: 0,
+                max: 100,
+                thumbSize: 15,
+            },
 
-    // function useCreateUser() {
-    //     const queryClient = useQueryClient();
-    //     return useMutation({
-    //         mutationFn: async (user: User) => {
-    //             //send api update request here
-    //             await new Promise((resolve) => setTimeout(resolve, 1000)); //fake api call
-    //             return Promise.resolve();
-    //         },
-    //         //client side optimistic update
-    //         onMutate: (newUserInfo: User) => {
-    //             queryClient.setQueryData(
-    //                 ["users"],
-    //                 (prevUsers: any) =>
-    //                     [
-    //                         ...prevUsers,
-    //                         {
-    //                             ...newUserInfo,
-    //                             id: (Math.random() + 1).toString(36).substring(7),
-    //                         },
-    //                     ] as User[],
-    //             );
-    //         },
-    //         // onSettled: () => queryClient.invalidateQueries({ queryKey: ['users'] }), //refetch users after mutation, disabled for demo
-    //     });
-    // }
-
-    const columns = useMemo(() => columnsData, []);
+            Cell: ({cell}: any) => {
+                return Number(cell.getValue()).toFixed(4)
+            },
+        },
+        {
+            header: "НГО",
+            accessorKey: "ngo",
+            filterVariant: "range-slider",
+            filterFn: "betweenInclusive",
+            mantineFilterRangeSliderProps: {
+                size: "lg",
+                precision: 2,
+                minRange: 10,
+                min: 0,
+                max: 100000,
+                thumbSize: 15,
+            },
+            Cell: ({cell}: any) => {
+                return Number(cell.getValue()).toFixed(2)
+            },
+            Footer: (table: any) => (
+                <Stack className="flex flex-col justify-center items-center">
+                    Загальне НГО
+                    <Box color="orange">{totalNGO.toFixed(2)}</Box>
+                </Stack>
+            ),
+        },
+        {
+            header: "Власник / Орендодавець",
+            accessorKey: "owner",
+            filterVariant: "multi-select",
+        },
+        {
+            header: "Договір купівлі-продажу",
+            accessorKey: "contract",
+        },
+        {
+            accessorFn: (originalRow: any) => new Date(originalRow.extract_date),
+            id: "contract_date",
+            header: "Дата договору купівлі-продажу",
+            filterVariant: "date-range",
+            size: 350,
+            Cell: ({cell}: any) => {
+                // @ts-ignore
+                const dt = new Date(cell.getValue<Date>());
+                return Date.parse(dt as any as string) ?
+                    new Date(dt).toLocaleDateString("ru-RU", {day: "2-digit", month: "2-digit", year: "numeric"}) : null;
+            },
+        },
+        {
+            header: "Витяг (номер запису в реєстрі)",
+            accessorKey: "extract",
+        },
+        {
+            accessorFn: (originalRow: any) => new Date(originalRow.extract_date),
+            id: "extract_date",
+            header: "Дата витягу",
+            filterVariant: "date-range",
+            size: 350,
+            Cell: ({cell}: any) => {
+                // @ts-ignore
+                const dt = new Date(cell.getValue<Date>());
+                return Date.parse(dt as any as string) ?
+                    new Date(dt).toLocaleDateString("ru-RU", {day: "2-digit", month: "2-digit", year: "numeric"}) : null;
+            },
+        },
+        {
+            header: "Витрати на оформлення земельної ділянки",
+            accessorKey: "expenses",
+            filterVariant: "range-slider",
+            filterFn: "between",
+        },
+        {
+            header: "Наявність відсканованих документів",
+            accessorKey: "document",
+            size: 500,
+            enableClickToCopy: true,
+        },
+    ], [totalNGO]);
 
     const table = useMantineReactTable({
         // @ts-ignore
@@ -122,56 +177,16 @@ export default function Table() {
         mantineTableBodyCellProps: {
             align: "center",
         },
-        // mantineToolbarAlertBannerProps: isLoadingUsersError
-        //     ? {
-        //         color: "red",
-        //         children: "Error loading data",
-        //     }
-        //     : undefined,
         displayColumnDefOptions: {
             'mrt-row-actions': {
                 header: '',
                 size: 100,
             },
         },
-        // onCreatingRowCancel: () => setValidationErrors({}),
-        // onCreatingRowSave: handleCreateUser,
-        // onEditingRowCancel: () => setValidationErrors({}),
-        // onEditingRowSave: handleSaveUser,
-        // renderRowActions: ({row, table}) => (
-        //     <Flex gap="md">
-        //         <Tooltip label="Edit">
-        //             <ActionIcon onClick={() => table.setEditingRow(row)}>
-        //                 <IconEdit/>
-        //             </ActionIcon>
-        //         </Tooltip>
-        //         <Tooltip label="Delete">
-        //             <ActionIcon color="red" onClick={() => openDeleteConfirmModal(row)}>
-        //                 <IconTrash/>
-        //             </ActionIcon>
-        //         </Tooltip>
-        //     </Flex>
-        // ),
-        // renderTopToolbarCustomActions: ({table}) => (
-        //     <Button
-        //         onClick={() => {
-        //             table.setCreatingRow(true); //simplest way to open the create row modal with no default values
-        //             //or you can pass in a row object to set default values with the `createRow` helper function
-        //             // table.setCreatingRow(
-        //             //   createRow(table, {
-        //             //     //optionally pass in default values for the new row, useful for nested data or other complex scenarios
-        //             //   }),
-        //             // );
-        //         }}
-        //     >
-        //         Create New User
-        //     </Button>
-        // ),
-        // state: {
-        //     isLoading: isLoadingUsers,
-        //     isSaving: isCreatingUser || isUpdatingUser || isDeletingUser,
-        //     showAlertBanner: isLoadingUsersError,
-        //     showProgressBars: isFetchingUsers,
+        // renderTopToolbar: ({ table }) => {
+        //     return (
+        //         <Button>DEACTIVATE</Button>
+        //     )
         // },
     });
 
