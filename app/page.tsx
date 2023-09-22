@@ -3,7 +3,7 @@ import authOptions from "@/app/api/auth/[...nextauth]/options"
 import Guest from "@/app/components/Guest"
 import Link from "next/link"
 import dynamic from "next/dynamic"
-import React from "react";
+import React from "react"
 
 const Table = dynamic(() => import('@/app/components/Table'), {ssr: false})
 

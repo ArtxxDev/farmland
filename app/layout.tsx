@@ -1,6 +1,8 @@
 import './globals.css'
 import type {Metadata} from 'next'
-import {Providers} from "@/app/providers"
+import {Session} from "@/app/components/providers/Session"
+import QueryProvider from "@/app/components/providers/QueryProvider";
+import {Toaster} from "react-hot-toast"
 
 export const metadata: Metadata = {
     title: 'FarmLand',
@@ -16,7 +18,12 @@ export default function RootLayout({children}: {
             <link rel='icon' href='/favicon.png'/>
         </head>
         <body>
-        <Providers>{children}</Providers>
+        <Session>
+            <QueryProvider>
+                {children}
+                <Toaster/>
+            </QueryProvider>
+        </Session>
         </body>
         </html>
     )

@@ -1,5 +1,5 @@
 export async function getTable() {
-    const res = await fetch("/api/getTable", {
+    const res = await fetch("/api/table", {
         method: "GET"
     })
 
@@ -11,7 +11,7 @@ export async function getTable() {
 }
 
 export async function getUsers() {
-    const res = await fetch("/api/getUsers", {
+    const res = await fetch("/api/users", {
         method: "GET"
     })
 

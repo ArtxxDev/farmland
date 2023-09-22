@@ -11,6 +11,9 @@ export default withAuth(
         } else if (pathname === "/dashboard") {
             return !req.nextauth.token || req.nextauth.token.role !== "admin" ?
                 NextResponse.redirect(new URL('/', req.url)) : NextResponse.next()
+        } else if (pathname === "/api/users") {
+            return !req.nextauth.token || req.nextauth.token.role !== "admin" ?
+                new NextResponse("Insufficient privileges", {status: 403}) : NextResponse.next()
         }
     }, {
         callbacks: {
@@ -24,5 +27,5 @@ export default withAuth(
 )
 
 export const config = {
-    matcher: ["/dashboard", "/login", "/register", "/api/getTable/", "/api/getUsers/"]
+    matcher: ["/dashboard", "/login", "/register", "/api/table/", "/api/users/"]
 }
