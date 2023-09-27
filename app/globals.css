@@ -9,12 +9,12 @@
 
 ::-webkit-scrollbar-track {
     background: #888;
-    border-radius: 5px;
+    border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb {
     background: #1864ab;
-    border-radius: 5px;
+    border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -32,3 +32,16 @@
         zoom: 0.7;
     }
 }
+
+.clickable-cell {
+    cursor: pointer
+}
+
+.empty-cell::before {
+    content: "";
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-right: 5px;
+}
+

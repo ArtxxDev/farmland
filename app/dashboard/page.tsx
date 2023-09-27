@@ -12,7 +12,8 @@ import {UserPublic} from "@/types/interfaces"
 import {notifyError} from "@/app/utils/notifications"
 import {Dialog, Transition} from "@headlessui/react"
 import {ExclamationTriangleIcon} from "@heroicons/react/24/outline"
-import Link from "next/link";
+import Link from "next/link"
+import localization from "@/constants/tableLocalization"
 
 export default function Dashboard() {
     // const session = useSession()
@@ -95,14 +96,15 @@ export default function Dashboard() {
         enableTopToolbar: false,
         createDisplayMode: "row",
         editDisplayMode: "row",
+        localization: localization,
         renderRowActions: ({row, table}) => (
             <Flex gap="md">
-                <Tooltip label="Edit">
+                <Tooltip label="Відредагувати">
                     <ActionIcon onClick={() => table.setEditingRow(row)}>
                         <IconEdit/>
                     </ActionIcon>
                 </Tooltip>
-                <Tooltip label="Delete">
+                <Tooltip label="Видалити">
                     <ActionIcon color="red" onClick={() => openDeleteConfirmModal(row)}>
                         <IconTrash/>
                     </ActionIcon>
@@ -208,7 +210,13 @@ export default function Dashboard() {
     }
 
     return (
-        <div>
+        <MantineProvider
+            theme={{
+                colorScheme: "light",
+                primaryColor: "blue",
+                primaryShade: 9,
+            }}
+        >
             {modalOpen && <Transition.Root show={modalOpen} as={Fragment}>
                 <Dialog as="div" className="relative z-10" initialFocus={cancelButtonRef} onClose={setModalOpen}>
                     <Transition.Child
@@ -292,15 +300,7 @@ export default function Dashboard() {
                 </Dialog>
             </Transition.Root>}
             <div className="w-1/3 min-w-fit">
-                <MantineProvider
-                    theme={{
-                        colorScheme: "light",
-                        primaryColor: "blue",
-                        primaryShade: 9,
-                    }}
-                >
                     <MantineReactTable table={table}/>
-                </MantineProvider>
             </div>
             <div className="flex">
                 <Link
@@ -313,6 +313,6 @@ export default function Dashboard() {
                     <span className="relative">Головна сторінка</span>
                 </Link>
             </div>
-        </div>
+        </MantineProvider>
     )
 }

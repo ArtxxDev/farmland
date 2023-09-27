@@ -1,12 +1,12 @@
-export const columnYellow = {
+export const columnBlue = {
     mantineTableHeadCellProps: {
         sx: {
-            backgroundColor: "lightgoldenrodyellow",
+            backgroundColor: "rgba(171,218,255,0.5)",
         },
     },
     mantineTableBodyCellProps: {
         sx: {
-            backgroundColor: "lightgoldenrodyellow",
+            backgroundColor: "rgba(171,218,255,0.5)",
         },
     }
 }

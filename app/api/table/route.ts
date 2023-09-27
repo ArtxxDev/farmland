@@ -34,14 +34,33 @@ export async function POST(req: NextRequest) {
     try {
         const data = await req.json()
 
-        const formattedContractSaleDate = isValidDate(data.contract_sale_date)
-            ? dayjs(data.contract_sale_date, "DD.MM.YYYY").format() : null
+        const formattedData = {
+            ...data
+        }
 
-        const formattedExtractDate = isValidDate(data.extract_land_date)
-            ? dayjs(data.extract_land_date, "DD.MM.YYYY").format() : null
+        if (formattedData.hasOwnProperty("contract_sale_date")) {
+            if (isValidDate(data.contract_sale_date)) {
+                formattedData.contract_sale_date = dayjs(data.contract_sale_date, "DD.MM.YYYY").format()
+            } else {
+                formattedData.contract_sale_date = null
+            }
+        }
 
-        const formattedContractLeaseDate = isValidDate(data.contract_lease_date)
-            ? dayjs(data.contract_lease_date, "DD.MM.YYYY").format() : null
+        if (formattedData.hasOwnProperty("extract_land_date")) {
+            if (isValidDate(data.extract_land_date)) {
+                formattedData.extract_land_date = dayjs(data.extract_land_date, "DD.MM.YYYY").format()
+            } else {
+                formattedData.extract_land_date = null
+            }
+        }
+
+        if (formattedData.hasOwnProperty("contract_lease_date")) {
+            if (isValidDate(data.contract_lease_date)) {
+                formattedData.contract_lease_date = dayjs(data.contract_lease_date, "DD.MM.YYYY").format()
+            } else {
+                formattedData.contract_lease_date = null
+            }
+        }
 
         if (data.id) {
             return NextResponse.json(
@@ -51,17 +70,11 @@ export async function POST(req: NextRequest) {
         }
 
         const newData = await prisma.table.create({
-            data: {
-                ...data,
-                contract_sale_date: formattedContractSaleDate,
-                extract_land_date: formattedExtractDate,
-                contract_lease_date: formattedContractLeaseDate,
-            }
+            data: formattedData
         })
 
         return NextResponse.json(newData, {status: 201})
     } catch (error) {
-        console.log(error)
         return NextResponse.json(
             {error: "Failed to create table data!"},
             {status: 500}
@@ -72,24 +85,41 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
     try {
         const data = await req.json()
+        const id = data.id
 
-        const formattedContractSaleDate = isValidDate(data.contract_sale_date)
-            ? dayjs(data.contract_sale_date, "DD.MM.YYYY").format() : null
+        const formattedData = {
+            ...data
+        }
 
-        const formattedExtractDate = isValidDate(data.extract_land_date)
-            ? dayjs(data.extract_land_date, "DD.MM.YYYY").format() : null
+        if (formattedData.id) delete formattedData.id
 
-        const formattedContractLeaseDate = isValidDate(data.contract_lease_date)
-            ? dayjs(data.contract_lease_date, "DD.MM.YYYY").format() : null
+        if (formattedData.hasOwnProperty("contract_sale_date")) {
+            if (isValidDate(data.contract_sale_date)) {
+                formattedData.contract_sale_date = dayjs(data.contract_sale_date, "DD.MM.YYYY").format()
+            } else {
+                formattedData.contract_sale_date = null
+            }
+        }
+
+        if (formattedData.hasOwnProperty("extract_land_date")) {
+            if (isValidDate(data.extract_land_date)) {
+                formattedData.extract_land_date = dayjs(data.extract_land_date, "DD.MM.YYYY").format()
+            } else {
+                formattedData.extract_land_date = null
+            }
+        }
+
+        if (formattedData.hasOwnProperty("contract_lease_date")) {
+            if (isValidDate(data.contract_lease_date)) {
+                formattedData.contract_lease_date = dayjs(data.contract_lease_date, "DD.MM.YYYY").format()
+            } else {
+                formattedData.contract_lease_date = null
+            }
+        }
 
         await prisma.table.update({
-            where: {id: data.id},
-            data: {
-                ...data,
-                contract_sale_date: formattedContractSaleDate,
-                extract_land_date: formattedExtractDate,
-                contract_lease_date: formattedContractLeaseDate,
-            }
+            where: {id},
+            data: formattedData
         })
 
         return new NextResponse(null, {status: 204})

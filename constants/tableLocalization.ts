@@ -1,0 +1,27 @@
+const localization = {
+    clearSearch: 'Очистити',
+    edit: "Відредагувати",
+    save: 'Зберегти',
+    cancel: 'Відмінити',
+    search: 'Знайти',
+    select: 'Вибрати',
+    noResultsFound: 'Результатів не знайдено',
+    min: "Від",
+    max: "До",
+    filterByColumn: 'Фільтрувати за {column}',
+    filteringByColumn: 'Фільтр за {column} - {filterType} {filterValue}',
+    selectedCountOfRowCountRowsSelected: '{selectedCount} из {rowCount} рядків вибрано',
+    showHideSearch: 'Показати/сховати пошук',
+    showHideFilters: 'Показати/сховати фільтри',
+    sortByColumnAsc: 'Сортувати {column} за зростанням',
+    sortByColumnDesc: 'Сортувати {column} за спаданням',
+    sortedByColumnAsc: 'Відсортовано по {column} зростанню',
+    sortedByColumnDesc: 'Відсортовано по {column} спаданню',
+    goToFirstPage: 'Перейти на першу сторінку',
+    goToLastPage: 'Перейти на останню сторінку',
+    goToNextPage: 'Перейти на наступну сторінку',
+    goToPreviousPage: 'Перейти на попередню сторінку',
+    rowsPerPage: 'Рядків на сторінці',
+}
+
+export default localization

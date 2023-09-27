@@ -21,11 +21,6 @@ model User {
   role     UserRole @default(guest)
 }
 
-enum RentDetails {
-  rentPrice
-  rentDate
-}
-
 model Table {
   id                  Int       @id @default(autoincrement())
   oblast              String?
@@ -42,7 +37,10 @@ model Table {
   expenses            String?
   document_land       String?
   tenant              String?
-  rent                Float?    @map("rent")
+  rent_price          Float?
+  rent_period         Int?
+  rent_advance        Float?
+  rent_payments       Json?
   contract_lease      String?
   contract_lease_date DateTime?
   extract_lease       String?
