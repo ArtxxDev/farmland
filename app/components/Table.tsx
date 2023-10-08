@@ -832,7 +832,7 @@ export default function Table() {
                         </div>
                         {rentModalData?.contractLeaseDate ? (
                             <div className="flex flex-col items-start">
-                                <table className="border-collapse border border-slate-400 mt-8">
+                                <table className="border-collapse border border-slate-400 mt-2">
                                     <thead>
                                     <tr>
                                         <th className="border border-slate-300 p-4 w-24">Рік</th>
