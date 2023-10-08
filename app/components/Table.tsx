@@ -6,20 +6,18 @@ import toast from "react-hot-toast"
 import {
     MantineReactTable,
     type MRT_ColumnDef, MRT_Row,
-    MRT_RowSelectionState,
-    MRT_TableOptions,
     useMantineReactTable,
     createRow
 } from "mantine-react-table"
-import {ActionIcon, Box, Button, Flex, Input, MantineProvider, Modal, Stack, Tooltip} from "@mantine/core"
+import {ActionIcon, Box, Flex, Input, MantineProvider, Modal, Stack, Tooltip, Pagination} from "@mantine/core"
 import {getTable} from "@/app/utils/clientRequests"
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query"
-import {RentRow, TableData} from "@/types/interfaces"
+import {TableData, RentDetails, RentPayments} from "@/types/interfaces"
 import {IconEdit, IconTrash} from "@tabler/icons-react"
 import {Dialog, Transition} from "@headlessui/react"
 import {ExclamationTriangleIcon} from "@heroicons/react/24/outline"
 import Link from "next/link"
-import {dateRange, rangeSlider} from "@/constants/filterFunctions"
+import {dateRange, range, rangeSlider} from "@/app/utils/filterFunctions"
 import {oblastList} from "@/constants/filterSelectProps"
 import {columnBlue} from "@/constants/commonColumnProps"
 import dayjs from "dayjs"
@@ -31,8 +29,7 @@ import PieChart from "@/app/components/PieChart"
 import {useDisclosure} from "@mantine/hooks"
 import localization from "@/constants/tableLocalization"
 import {notifyError} from "@/app/utils/notifications"
-import {isValidRentInputs} from "@/app/utils/validateRentInputs"
-import rentPaymentsCalculator from "@/app/utils/rentPaymentsCalculator"
+import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments"
 
 dayjs.extend(customParseFormat)
 
@@ -40,42 +37,24 @@ export default function Table() {
     const session = useSession()
     const queryClient = useQueryClient()
 
+    const [isMobile, setIsMobile] = useState(false)
+
     const [deleteModalOpen, setDeleteModalOpen] = useState(false)
     const cancelButtonRef = useRef(null)
     const [deleteModalTableData, setDeleteModalTableData] = useState<TableData | null>(null)
 
     const [openedRentModal, {open, close}] = useDisclosure(false)
-    const [rentModalData, setRentModalData] = useState<any | null>({})
-    const [rentAdvanceInput, setRentAdvanceInput] = useState("")
-    const [rentPeriodInput, setRentPeriodInput] = useState("")
-    const [rentPriceInput, setRentPriceInput] = useState("")
-    const [rentPayments, setRentPayments] = useState<(RentRow[] | [])>([])
+    const [rentModalData, setRentModalData] = useState<any>(null)
 
-    useEffect(() => {
-        if (rentModalData) {
-            setRentAdvanceInput(rentModalData.rent_advance || "")
-            setRentPeriodInput(rentModalData.rent_period || "")
-            setRentPriceInput(rentModalData.rent_price || "")
-        }
-    }, [rentModalData]);
+    const [rentAdvanceInput, setRentAdvanceInput] = useState<number>(0)
+    const [rentPeriodInput, setRentPeriodInput] = useState<number>(0)
+    const [rentPriceInput, setRentPriceInput] = useState<number>(0)
 
-    useEffect(() => {
-        if (
-            isValidRentInputs(rentAdvanceInput, rentPeriodInput, rentPriceInput) &&
-            rentModalData.contract_lease_date
-        ) {
-            const newRentPayments = rentPaymentsCalculator(
-                Number(rentAdvanceInput),
-                Number(rentPeriodInput),
-                Number(rentPriceInput),
-                rentModalData.contract_lease_date
-            );
-            setRentPayments(newRentPayments)
-        } else {
-            setRentPayments([])
-        }
-    }, [rentAdvanceInput, rentPeriodInput, rentPriceInput, rentModalData])
-
+    const [rentDetails, setRentDetails] = useState<(RentDetails[] | null)>(null)
+    const [rentPayments, setRentPayments] = useState<(RentPayments[])>([])
+    const [editedRentPayments, setEditedRentPayments] = useState<(RentPayments[])>([])
+    const [editedRowIndex, setEditedRowIndex] = useState(-1)
+    const [rentPaymentsActivePage, setRentPaymentActivePage] = useState(1)
 
     const {
         data: fetchedData = [],
@@ -88,14 +67,32 @@ export default function Table() {
     const {mutateAsync: updateTableData, isLoading: isUpdatingTableData} = useUpdateTableData()
     const {mutateAsync: deleteTableData, isLoading: isDeletingTableData} = useDeleteTableData()
 
-    const totalNGO = useMemo(
-        () => fetchedData.reduce((acc, curr: any) => Number(acc) + Number(curr.ngo), 0),
-        [fetchedData]
-    )
-    const totalArea = useMemo(
-        () => fetchedData.reduce((acc, curr: any) => Number(acc) + Number(curr.area), 0),
-        [fetchedData]
-    )
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768)
+        }
+
+        handleResize();
+        window.addEventListener('resize', handleResize)
+
+        return () => {
+            window.removeEventListener('resize', handleResize)
+        }
+    }, [])
+
+    // Total NGO footer
+    const totalNGO = useMemo(() => {
+        return fetchedData.reduce((a, b: any) => {
+            return !isNaN(parseFloat(b.ngo)) ? a + parseFloat(b.ngo) : a
+        }, 0)
+    }, [fetchedData])
+    // Total Area footer
+    const totalArea = useMemo(() => {
+        return fetchedData.reduce((a, b: any) => {
+            return !isNaN(parseFloat(b.area)) ? a + parseFloat(b.area) : a
+        }, 0)
+    }, [fetchedData])
+    // Leased chart pie stats
     const leasedStats = useMemo(
         () => {
             const leased = fetchedData.filter(item => item.contract_lease).length
@@ -109,11 +106,62 @@ export default function Table() {
         }, [fetchedData]
     )
 
+    // Initial Rent Payments (from DB)
+    useEffect(() => {
+        if (openedRentModal && rentModalData && fetchedData) {
+            const row: any = {...fetchedData.find((data) => data.id === rentModalData?.id)}
+
+            setRentAdvanceInput(!isNaN(parseFloat(row.rent_advance)) ? row.rent_advance : 0)
+            setRentPeriodInput(!isNaN(parseFloat(row.rent_period)) ? row.rent_period : 0)
+            setRentPriceInput(!isNaN(parseFloat(row.rent_price)) ? row.rent_price : 0)
+            setRentPayments(row.rent_payments || [])
+        }
+    }, [openedRentModal])
+
     const dateToLocalFormat = (date: any) => date.toLocaleDateString("ru-RU", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric"
     })
+
+    const calculateRentValue = (row: any) => {
+        if (!row.rent_payments) {
+            return null
+        }
+
+        return row.rent_payments
+            .filter((payment: any) => payment && !isNaN(payment.rentPrice) && !payment.rentIsPaid)
+            .reduce((total: any, payment: any) => total + Number(payment.rentPrice), 0)
+    }
+
+    const getUpdatedRentPayments = () => {
+        return rentPayments.map((payment) => {
+            const editedPayment = editedRentPayments.find(
+                (editedPayment) => editedPayment.rentYear === payment.rentYear
+            )
+
+            return editedPayment ? editedPayment : payment
+        })
+    }
+
+    const rentIsPaidIcon = (
+        rentIsPaid: boolean | undefined,
+        rentRow: RentPayments
+    ) => {
+        return rentIsPaid ? (
+            <TickIcon
+                width={32}
+                height={32}
+                onClick={() => handleEditRentStatus(rentRow)}
+            />
+        ) : (
+            <CrossIcon
+                width={32}
+                height={32}
+                onClick={() => handleEditRentStatus(rentRow)}
+            />
+        )
+    }
 
     const columns = useMemo<MRT_ColumnDef<TableData>[]>(() => [
             {
@@ -207,14 +255,11 @@ export default function Table() {
                 header: "Власник / Орендодавець",
                 accessorKey: "owner",
                 filterVariant: "multi-select",
-                mantineFilterMultiSelectProps:
-                    {
-                        //@ts-ignore
-                        data: [...new Set(fetchedData.map((e) => e.owner))]
-                    }
-                ,
-            }
-            ,
+                mantineFilterMultiSelectProps: {
+                    //@ts-ignore
+                    data: [...new Set(fetchedData.map((e) => e.owner))]
+                },
+            },
             {
                 header: "Договір купівлі-продажу",
                 accessorKey: "contract_sale",
@@ -310,28 +355,30 @@ export default function Table() {
             {
                 header: "Орендна плата",
                 accessorKey: "rent",
+                accessorFn: (row: any) => row.rent_payments ?
+                    calculateRentValue(row).toFixed(2) : null,
                 enableEditing: false,
-                accessorFn: (row: any) => {
-                    if (row.rent_advance && row.rent_period && row.rent_price) {
-                        return (row.rent_period * row.rent_price) - row.rent_advance
-                    }
-
-                    return null
-                },
+                filterVariant: "range",
+                filterFn: "range",
                 Cell: ({cell, row}: any) => (
                     <div
                         className={`clickable-cell ${cell.getValue() === null ? 'empty-cell' : ''}`}
                         onClick={() => {
-                            const {rent_period, rent_price, rent_advance, contract_lease_date} = row.original
-                            if (rent_period || rent_price || rent_advance || contract_lease_date) {
+                            const {
+                                id,
+                                rent_period,
+                                rent_price,
+                                rent_advance,
+                                contract_lease_date,
+                                rent_payments
+                            } = row.original
+
+                            if (rent_period || rent_price || rent_advance || contract_lease_date || rent_payments) {
                                 setRentModalData({
-                                    id: row.original.id,
-                                    rent_payments: row.original.rent_payments,
-                                    rent_advance,
-                                    rent_period,
-                                    rent_price,
-                                    contract_lease_date,
+                                    id,
+                                    contractLeaseDate: contract_lease_date,
                                 })
+
                                 open()
                             } else {
                                 notifyError("Спочатку необхідно вказати дату договору оренди")
@@ -341,6 +388,7 @@ export default function Table() {
                         {cell.getValue()}
                     </div>
                 ),
+                size: 200,
                 ...columnBlue
             },
             {
@@ -359,8 +407,7 @@ export default function Table() {
                 size: 500,
                 ...columnBlue
             },
-        ],
-        [totalNGO, totalArea, leasedStats]
+        ], [totalNGO, totalArea, leasedStats, rentDetails, rentPayments]
     )
 
     const handleCreateTableData = async ({values, table}: any) => {
@@ -395,8 +442,86 @@ export default function Table() {
         setDeleteModalOpen(true)
     }
 
+    useEffect(() => {
+        if (rentModalData) {
+            updateRentPayments()
+        }
+
+    }, [rentAdvanceInput, rentPeriodInput, rentPriceInput])
+
+    const updateRentPayments = () => {
+        if (rentPayments.length < 1) {
+            const calculatedRentPayments = rentPaymentsInitial({
+                rentAdvance: rentAdvanceInput,
+                rentPeriod: rentPeriodInput,
+                rentPrice: rentPriceInput,
+                contractLeaseDate: rentModalData.contractLeaseDate,
+                rentPayments: rentPayments,
+            })
+
+            setRentPayments(calculatedRentPayments)
+        } else {
+
+            const calculatedRentPayments = calculateRentPayments({
+                rentAdvance: rentAdvanceInput,
+                rentPeriod: rentPeriodInput,
+                rentPrice: rentPriceInput,
+                contractLeaseDate: rentModalData.contractLeaseDate,
+                rentPayments: rentPayments,
+            })
+            console.log("we're here", calculatedRentPayments)
+            setRentPayments(calculatedRentPayments)
+        }
+
+    }
+
+    const handleRentInputsChange = (e: any) => {
+        if (e.target.name === "rentAdvance") {
+            setRentAdvanceInput(parseFloat(e.target.value))
+        } else if (e.target.name === "rentPeriod") {
+            setRentPeriodInput(parseInt(e.target.value, 10))
+        } else if (e.target.name === "rentPrice") {
+            setRentPriceInput(parseFloat(e.target.value))
+        }
+    }
+
+    const handleEditRentPrice = (rentPaymentsRow: RentPayments, newValue: string) => {
+        const updatedRentPayments: RentPayments[] = [...editedRentPayments]
+
+        const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear)
+
+        if (rowIndex !== -1) {
+            updatedRentPayments[rowIndex].rentPrice = Number(newValue)
+        } else {
+            updatedRentPayments.push({
+                ...rentPaymentsRow,
+                rentPrice: Number(newValue),
+            })
+        }
+
+        setEditedRentPayments(updatedRentPayments)
+    }
+
+    const handleEditRentStatus = (rentPaymentsRow: RentPayments) => {
+        const updatedRentPayments: RentPayments[] = [...editedRentPayments]
+
+        const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear)
+
+        if (rowIndex !== -1) {
+            updatedRentPayments[rowIndex].rentIsPaid = !updatedRentPayments[rowIndex].rentIsPaid
+        } else {
+            updatedRentPayments.push({
+                ...rentPaymentsRow,
+                rentIsPaid: !rentPaymentsRow.rentIsPaid,
+            })
+        }
+
+        setEditedRentPayments(updatedRentPayments)
+    }
+
+
     const table = useMantineReactTable({
-        //@ts-ignore
+        // @ts-ignore
         columns,
         data: fetchedData,
         enableColumnActions: false,
@@ -463,6 +588,7 @@ export default function Table() {
         ),
         filterFns: {
             dateRange: dateRange,
+            range: range,
             rangeSlider: rangeSlider
         },
         state: {
@@ -661,112 +787,154 @@ export default function Table() {
             <Modal
                 opened={openedRentModal}
                 onClose={() => {
-                    close();
-                    setRentModalData({});
+                    setRentModalData(null)
+                    setRentAdvanceInput(0)
+                    setRentPeriodInput(0)
+                    setRentPriceInput(0)
+                    setRentPayments([])
+                    setEditedRentPayments([])
+                    close()
                 }}
-                title={<h1 className="text-xl font-bold">Деталі орендної плати</h1>}
+                title={<p className="text-xl font-bold">Деталі орендної плати</p>}
+                size="sm"
             >
                 {rentModalData && (
                     <div>
                         <div className="flex flex-row items-center mb-4">
-                            <p className="text-md font-semibold w-14">Аванс</p>
+                            <p className="text-md font-semibold w-32">Аванс</p>
                             <Input
+                                type="number"
+                                name="rentAdvance"
                                 value={rentAdvanceInput}
-                                onChange={(event) => {
-                                    setRentAdvanceInput(event.target.value);
-                                }}
+                                onChange={handleRentInputsChange}
                                 className="w-20"
                             />
                         </div>
                         <div className="flex flex-row items-center mb-4">
-                            <p className="text-md font-semibold w-14">Срок</p>
+                            <p className="text-md font-semibold w-32">Термін оренди</p>
                             <Input
+                                type="number"
+                                name="rentPeriod"
                                 value={rentPeriodInput}
-                                onChange={(event) => {
-                                    setRentPeriodInput(event.target.value);
-                                }}
+                                onChange={handleRentInputsChange}
                                 className="w-20"
                             />
                         </div>
                         <div className="flex flex-row items-center mb-4">
-                            <p className="text-md font-semibold w-14">Плата</p>
+                            <p className="text-md font-semibold w-32">Плата (за рік)</p>
                             <Input
+                                type="number"
+                                name="rentPrice"
                                 value={rentPriceInput}
-                                onChange={(event) => {
-                                    setRentPriceInput(event.target.value);
-                                }}
+                                onChange={handleRentInputsChange}
                                 className="w-20"
                             />
                         </div>
-                        {rentModalData.contract_lease_date ? (
-                            <table className="border-collapse border border-slate-400 mt-8">
-                                <thead>
-                                <tr>
-                                    <th className="border border-slate-300 p-4">Рік</th>
-                                    <th className="border border-slate-300 p-4">Сума до сплати</th>
-                                    <th className="border border-slate-300 p-4"></th>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {rentPayments.map((rentRow, i) => (
-                                    <tr key={i}>
-                                        <td className="border border-slate-300 p-4 text-center">
-                                            {rentRow.rentYear}
-                                        </td>
-                                        <td className="border border-slate-300 p-4 text-center">
-                                            {rentRow.rentPrice}
-                                        </td>
-                                        <td className="border border-slate-300 p-4">
-                                            {rentRow.rentIsPaid ? (
-                                                <TickIcon width={24} height={24}/>
-                                            ) : (
-                                                <CrossIcon width={24} height={24}/>
-                                            )}
-                                        </td>
+                        {rentModalData?.contractLeaseDate ? (
+                            <div className="flex flex-col items-start">
+                                <table className="border-collapse border border-slate-400 mt-8">
+                                    <thead>
+                                    <tr>
+                                        <th className="border border-slate-300 p-4 w-24">Рік</th>
+                                        <th className="border border-slate-300 p-4 w-40">Сума до сплати</th>
+                                        <th className="border border-slate-300 p-4" style={{width: "74px"}}></th>
                                     </tr>
-                                ))}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                    {rentPayments
+                                        ?.slice(
+                                            (rentPaymentsActivePage - 1) * 5,
+                                            Math.min((rentPaymentsActivePage - 1) * 5 + 5, rentPayments.length)
+                                        )
+                                        .map((rentRow, i) => (
+                                            <tr key={i}>
+                                                <td className="border border-slate-300 p-4 text-center">
+                                                    {rentRow.rentYear}
+                                                </td>
+                                                <td
+                                                    className="border border-slate-300 p-4 text-center w-20"
+                                                    style={{height: "69px"}}
+                                                    onClick={() => {
+                                                        setEditedRowIndex(i)
+                                                    }}
+                                                    onBlur={() => setEditedRowIndex(-1)}
+                                                >
+                                                    {i === editedRowIndex ? (
+                                                        <Input
+                                                            style={{
+                                                                width: "100%",
+                                                                height: "100%",
+                                                                margin: 0,
+                                                                padding: "0",
+                                                                boxSizing: "border-box"
+                                                            }}
+                                                            value={
+                                                                editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice ||
+                                                                rentRow.rentPrice
+                                                            }
+                                                            onChange={(e) => handleEditRentPrice(rentRow, e.target.value)}
+                                                        />
+                                                    ) : (
+                                                        editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice ||
+                                                        rentRow.rentPrice
+                                                    )}
+                                                </td>
+                                                <td className="w-16 border border-slate-300">
+                                                    <div className="flex justify-center items-center h-full">
+                                                        {editedRentPayments.find((e) => e.rentYear === rentRow.rentYear) ? (
+                                                            rentIsPaidIcon(
+                                                                editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentIsPaid,
+                                                                rentRow
+                                                            )
+                                                        ) : (
+                                                            rentIsPaidIcon(rentRow.rentIsPaid, rentRow)
+                                                        )}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                                <div className="flex justify-center mt-3.5">
+                                    <Pagination
+                                        value={rentPaymentsActivePage}
+                                        onChange={setRentPaymentActivePage}
+                                        total={10}
+                                        size="md"
+                                        style={isMobile ? {gap: 1.5, margin: 0} : {gap: 5, margin: 0}}
+                                    />
+                                </div>
+                            </div>
                         ) : (
                             <p className="text-md text-red-500 font-bold mt-8">
                                 Вкажіть дату договору оренди в таблиці
                             </p>
                         )}
-                        <div className="flex justify-center mt-4">
-                            <button
-                                className="mt-3 w-1/2 px-4 py-2 rounded bg-blue-500 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-blue-400 transition-all ease-out duration-300"
-                                style={{whiteSpace: "nowrap"}}
-                                onClick={async () => {
-                                    const updatedRentPayments = isValidRentInputs(
-                                        rentAdvanceInput,
-                                        rentPeriodInput,
-                                        rentPriceInput
-                                    ) ? rentPaymentsCalculator(
-                                        Number(rentAdvanceInput),
-                                        Number(rentPeriodInput),
-                                        Number(rentPriceInput),
-                                        rentModalData.contract_lease_date
-                                    ) : []
-
-                                    await toast.promise(
-                                        updateTableData({
-                                            id: rentModalData.id,
-                                            rent_advance: Number(rentAdvanceInput),
-                                            rent_period: Number(rentPeriodInput),
-                                            rent_price: Number(rentPriceInput),
-                                            rent_payments: updatedRentPayments,
-                                        }),
-                                        {
-                                            loading: <b>Зберігається...</b>,
-                                            success: <b>Інформація успішно збережена!</b>,
-                                            error: <b>Виникла помилка.</b>,
-                                        }
-                                    )
-                                }}
-                            >
-                                Зберегти
-                            </button>
-                        </div>
+                        <button
+                            className="mt-6 w-full px-6 py-2 font-semibold rounded bg-green-500 hover:bg-gradient-to-r hover:from-green-500 hover:to-green-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-green-400 transition-all ease-out duration-300"
+                            style={{whiteSpace: "nowrap"}}
+                            onClick={async () => {
+                                const updatedRentPayments = getUpdatedRentPayments()
+                                const updatedRentDetails = {
+                                    id: rentModalData?.id,
+                                    rent_advance: Number(rentAdvanceInput),
+                                    rent_period: Number(rentPeriodInput),
+                                    rent_price: Number(rentPriceInput),
+                                    rent_payments: updatedRentPayments || null,
+                                }
+                                const res = await toast.promise(updateTableData(updatedRentDetails), {
+                                    loading: <b>Зберігається...</b>,
+                                    success: <b>Інформація успішно збережена!</b>,
+                                    error: <b>Виникла помилка.</b>,
+                                })
+                                if (res.ok) {
+                                    setEditedRentPayments([])
+                                    setRentPayments(updatedRentPayments)
+                                }
+                            }}
+                        >
+                            Зберегти
+                        </button>
                     </div>
                 )}
             </Modal>

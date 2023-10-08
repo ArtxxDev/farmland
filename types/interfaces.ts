@@ -18,7 +18,7 @@ export interface TableData {
     "rent_price"?: number
     "rent_period"?: any
     "rent_advance"?: number
-    "rent_payments"?: any,
+    "rent_payments"?: RentPayments[] | null,
     "contract_lease"?: string
     "contract_lease_date"?: string
     "extract_lease"?: string
@@ -32,8 +32,16 @@ export interface UserPublic {
     "role": string
 }
 
-export interface RentRow {
+export interface RentPayments {
     rentYear: number
     rentPrice: number
     rentIsPaid: boolean
+}
+
+export interface RentDetails {
+    rentAdvance: number,
+    rentPeriod: number,
+    rentPrice: number,
+    contractLeaseDate: string,
+    rentPayments: RentPayments[]
 }

@@ -25,6 +25,7 @@ export const dateRange = (row: any, id: any, filterValue: any) => {
         !rowDate.isAfter(dayjs(dateTo).endOf("day"))
     )
 }
+
 export const rangeSlider = (row: any, id: any, filterValue: any) => {
     const [min, max] = filterValue
     const cellValue = parseFloat(row.getValue(id))
@@ -34,6 +35,25 @@ export const rangeSlider = (row: any, id: any, filterValue: any) => {
     } else if (!isNaN(min)) {
         return cellValue >= min
     } else if (!isNaN(max)) {
+        return cellValue <= max
+    }
+
+    return true
+}
+
+export const range = (row: any, id: any, filterValue: any) => {
+    let [min, max] = filterValue
+    const cellValue = parseFloat(row.getValue(id))
+
+    if (isNaN(parseFloat(min)) && isNaN(parseFloat(max))) {
+        return true
+    }
+
+    if (!isNaN(parseFloat(min)) && !isNaN(parseFloat(max))) {
+        return cellValue >= min && cellValue <= max
+    } else if (!isNaN(parseFloat(min))) {
+        return cellValue >= min
+    } else if (!isNaN(parseFloat(max))) {
         return cellValue <= max
     }
 

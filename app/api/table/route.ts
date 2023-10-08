@@ -2,14 +2,10 @@ import prisma from "@/prisma/client"
 import {NextRequest, NextResponse} from "next/server"
 import {Table} from "@prisma/client"
 import dayjs from "dayjs"
+import isValidDate from "@/app/utils/isValidDate"
 import customParseFormat from "dayjs/plugin/customParseFormat"
 
 dayjs.extend(customParseFormat)
-
-const isValidDate = (dateString: string) => {
-    const date = dayjs(dateString, "DD.MM.YYYY")
-    return date.isValid()
-}
 
 export async function GET(req: NextRequest) {
     try {
