@@ -32,10 +32,10 @@ export const rentPaymentsInitial = (rentDetails: RentDetails) => {
 
 
 export const calculateRentPayments = (rentDetails: RentDetails): RentPayments[] => {
-    let { rentAdvance, rentPeriod, rentPrice, contractLeaseDate, rentPayments } = rentDetails;
+    let { rentAdvance, rentPeriod, rentPrice, contractLeaseDate, rentPayments } = rentDetails
 
     if (rentPeriod > 50) {
-        rentPeriod = 50;
+        rentPeriod = 50
     }
 
     const calculatedPayments: RentPayments[] = [];
@@ -43,7 +43,7 @@ export const calculateRentPayments = (rentDetails: RentDetails): RentPayments[] 
     for (let i = 0; i < rentPeriod; i++) {
         if (i < rentPayments.length) {
             // Use values from rentPayments if they exist
-            calculatedPayments.push(rentPayments[i]);
+            calculatedPayments.push(rentPayments[i])
         } else {
             // Calculate new payment if not provided in rentPayments
             const rentRow = {

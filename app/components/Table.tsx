@@ -43,7 +43,7 @@ export default function Table() {
     const cancelButtonRef = useRef(null)
     const [deleteModalTableData, setDeleteModalTableData] = useState<TableData | null>(null)
 
-    const [openedRentModal, {open, close}] = useDisclosure(false)
+    const [openedRentModal, {open: openRentModal, close: closeRentModal}] = useDisclosure(false)
     const [rentModalData, setRentModalData] = useState<any>(null)
 
     const [rentAdvanceInput, setRentAdvanceInput] = useState<number>(0)
@@ -115,6 +115,8 @@ export default function Table() {
             setRentPeriodInput(!isNaN(parseFloat(row.rent_period)) ? row.rent_period : 0)
             setRentPriceInput(!isNaN(parseFloat(row.rent_price)) ? row.rent_price : 0)
             setRentPayments(row.rent_payments || [])
+            setRentPaymentActivePage(1)
+            setEditedRowIndex(-1)
         }
     }, [openedRentModal])
 
@@ -379,7 +381,7 @@ export default function Table() {
                                     contractLeaseDate: contract_lease_date,
                                 })
 
-                                open()
+                                openRentModal()
                             } else {
                                 notifyError("Спочатку необхідно вказати дату договору оренди")
                             }
@@ -469,7 +471,7 @@ export default function Table() {
                 contractLeaseDate: rentModalData.contractLeaseDate,
                 rentPayments: rentPayments,
             })
-            console.log("we're here", calculatedRentPayments)
+
             setRentPayments(calculatedRentPayments)
         }
 
@@ -486,7 +488,7 @@ export default function Table() {
     }
 
     const handleEditRentPrice = (rentPaymentsRow: RentPayments, newValue: string) => {
-        const updatedRentPayments: RentPayments[] = [...editedRentPayments]
+        const updatedRentPayments: RentPayments[] = [...editedRentPayments];
 
         const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear)
 
@@ -734,8 +736,10 @@ export default function Table() {
                                         <div className="sm:flex sm:items-start">
                                             <div
                                                 className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                                                <ExclamationTriangleIcon className="h-6 w-6 text-red-600"
-                                                                         aria-hidden="true"/>
+                                                <ExclamationTriangleIcon
+                                                    className="h-6 w-6 text-red-600"
+                                                    aria-hidden="true"
+                                                />
                                             </div>
                                             <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
                                                 <Dialog.Title as="h3"
@@ -793,7 +797,7 @@ export default function Table() {
                     setRentPriceInput(0)
                     setRentPayments([])
                     setEditedRentPayments([])
-                    close()
+                    closeRentModal()
                 }}
                 title={<p className="text-xl font-bold">Деталі орендної плати</p>}
                 size="sm"
@@ -861,6 +865,7 @@ export default function Table() {
                                                 >
                                                     {i === editedRowIndex ? (
                                                         <Input
+                                                            type="text"
                                                             style={{
                                                                 width: "100%",
                                                                 height: "100%",
@@ -869,15 +874,15 @@ export default function Table() {
                                                                 boxSizing: "border-box"
                                                             }}
                                                             value={
-                                                                editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice ||
-                                                                rentRow.rentPrice
+                                                                editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice?.toString()
+                                                                || rentRow.rentPrice.toString()
                                                             }
                                                             onChange={(e) => handleEditRentPrice(rentRow, e.target.value)}
                                                         />
-                                                    ) : (
-                                                        editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice ||
-                                                        rentRow.rentPrice
-                                                    )}
+                                                    ) : editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice !== undefined
+                                                        ? editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice
+                                                        : rentRow.rentPrice
+                                                    }
                                                 </td>
                                                 <td className="w-16 border border-slate-300">
                                                     <div className="flex justify-center items-center h-full">
