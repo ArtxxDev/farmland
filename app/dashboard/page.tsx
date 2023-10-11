@@ -290,7 +290,7 @@ export default function Dashboard() {
                                             onClick={() => setModalOpen(false)}
                                             ref={cancelButtonRef}
                                         >
-                                            Відмінити
+                                            Скасувати
                                         </button>
                                     </div>
                                 </Dialog.Panel>
