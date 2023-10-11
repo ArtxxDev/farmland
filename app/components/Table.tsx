@@ -660,10 +660,12 @@ export default function Table() {
     function useCreateTableData() {
         return useMutation({
             mutationFn: async (tableData: TableData) => {
+                // @ts-ignore
+                const id = tableData.id.props ? tableData.id.props.children[0].props.children : tableData.id
+
                 const formattedTableData = {
                     ...tableData,
-                    // @ts-ignore
-                    id: tableData.id.props.children[0].props.children,
+                    id: id,
                 }
 
                 delete formattedTableData.isLeased
@@ -685,10 +687,12 @@ export default function Table() {
     function useUpdateTableData() {
         return useMutation({
             mutationFn: async (tableData: TableData) => {
+                // @ts-ignore
+                const id = tableData.id.props ? tableData.id.props.children[0].props.children : tableData.id
+
                 const formattedTableData = {
                     ...tableData,
-                    // @ts-ignore
-                    id: tableData.id.props.children[0].props.children,
+                    id,
                 }
 
                 delete formattedTableData.isLeased
