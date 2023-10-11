@@ -14,7 +14,6 @@ import {getTable} from "@/app/utils/clientRequests"
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query"
 import {TableData, RentDetails, RentPayments} from "@/types/interfaces"
 import {IconEdit, IconTrash} from "@tabler/icons-react"
-import {Dialog, Transition} from "@headlessui/react"
 import {ExclamationTriangleIcon} from "@heroicons/react/24/outline"
 import Link from "next/link"
 import {dateRange, range, rangeSlider} from "@/app/utils/filterFunctions"
@@ -30,6 +29,7 @@ import {useDisclosure} from "@mantine/hooks"
 import localization from "@/constants/tableLocalization"
 import {notifyError} from "@/app/utils/notifications"
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments"
+import ExclamationIcon from "@/app/components/ExclamationIcon";
 
 dayjs.extend(customParseFormat)
 
@@ -39,9 +39,8 @@ export default function Table() {
 
     const [isMobile, setIsMobile] = useState(false)
 
-    const [deleteModalOpen, setDeleteModalOpen] = useState(false)
-    const cancelButtonRef = useRef(null)
-    const [deleteModalTableData, setDeleteModalTableData] = useState<TableData | null>(null)
+    const [openedDeleteModal, {open: openDeleteModal, close: closeDeleteModal}] = useDisclosure(false)
+    const [deleteModalData, setDeleteModalData] = useState<TableData | null>(null)
 
     const [openedRentModal, {open: openRentModal, close: closeRentModal}] = useDisclosure(false)
     const [rentModalData, setRentModalData] = useState<any>(null)
@@ -72,7 +71,7 @@ export default function Table() {
             setIsMobile(window.innerWidth <= 768)
         }
 
-        handleResize();
+        handleResize()
         window.addEventListener('resize', handleResize)
 
         return () => {
@@ -131,9 +130,10 @@ export default function Table() {
             return null
         }
 
-        return row.rent_payments
+        return  row.rent_payments
             .filter((payment: any) => payment && !isNaN(payment.rentPrice) && !payment.rentIsPaid)
             .reduce((total: any, payment: any) => total + Number(payment.rentPrice), 0)
+            .toFixed(2)
     }
 
     const getUpdatedRentPayments = () => {
@@ -165,14 +165,32 @@ export default function Table() {
         )
     }
 
+    const isDebtor = (row: any) => {
+        const rentPayments = row.rent_payments
+        const isDebt = (rentPayments: RentPayments[]) => {
+            return rentPayments.some((payment) => {
+                const nextYearDate = dayjs(`${payment.rentYear + 1}-01-01`)
+                return payment.rentPrice > 0 && !payment.rentIsPaid && dayjs().isAfter(nextYearDate)
+            })
+        }
+
+        return (
+            <div className="flex items-center justify-center">
+                <div>{row.id}</div>
+                {rentPayments && isDebt(rentPayments) && <ExclamationIcon width={16} height={16} style={{position: "absolute", marginLeft: "-48px"}}/>}
+            </div>
+        )
+    }
+
     const columns = useMemo<MRT_ColumnDef<TableData>[]>(() => [
             {
                 header: "ID",
                 accessorKey: "id",
+                accessorFn: (row: any) => isDebtor(row),
                 enableEditing: false,
                 enableColumnFilter: false,
                 enableGlobalFilter: false,
-                size: 70,
+                size: 75,
             },
             {
                 header: "Область",
@@ -241,9 +259,9 @@ export default function Table() {
                 filterFn: "rangeSlider",
                 mantineFilterRangeSliderProps: () => ({
                     size: "lg",
-                    minRange: 10,
+                    minRange: 100,
                     min: 0,
-                    max: 100000,
+                    max: 250000,
                     thumbSize: 15
                 }),
                 Footer: () => (
@@ -358,7 +376,7 @@ export default function Table() {
                 header: "Орендна плата",
                 accessorKey: "rent",
                 accessorFn: (row: any) => row.rent_payments ?
-                    calculateRentValue(row).toFixed(2) : null,
+                    calculateRentValue(row) : null,
                 enableEditing: false,
                 filterVariant: "range",
                 filterFn: "range",
@@ -440,8 +458,8 @@ export default function Table() {
 
     const openDeleteConfirmModal = async (row: MRT_Row<TableData>) => {
         const data: TableData = row.original
-        setDeleteModalTableData(data)
-        setDeleteModalOpen(true)
+        setDeleteModalData(data)
+        openDeleteModal()
     }
 
     useEffect(() => {
@@ -488,7 +506,7 @@ export default function Table() {
     }
 
     const handleEditRentPrice = (rentPaymentsRow: RentPayments, newValue: string) => {
-        const updatedRentPayments: RentPayments[] = [...editedRentPayments];
+        const updatedRentPayments: RentPayments[] = [...editedRentPayments]
 
         const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear)
 
@@ -530,16 +548,9 @@ export default function Table() {
         initialState: {
             showColumnFilters: true,
             density: "md",
-            //@ts-ignore
-            pagination: {
-                pageSize: 8
-            },
-            // isFullScreen: true
+            isFullScreen: true
         },
         localization: localization,
-        mantinePaginationProps: {
-            rowsPerPageOptions: ['5', '8', '10', '15', '20', '30', '50', '100'],
-        },
         mantineSelectCheckboxProps: {
             color: "blue",
         },
@@ -558,7 +569,6 @@ export default function Table() {
             },
         }),
         mantineTableProps: {
-            striped: false,
             withColumnBorders: true,
             withBorder: true,
             sx: {
@@ -603,7 +613,10 @@ export default function Table() {
         renderTopToolbarCustomActions: ({table, row}: any) => (
             <div className="flex flex-row justify-between items-center">
                 <button
-                    className="flex-grow flex-shrink w-1/2 px-4 py-2 rounded bg-green-500 hover:bg-gradient-to-r hover:from-green-500 hover:to-green-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-green-400 transition-all ease-out duration-300"
+                    className={
+                        "flex-grow flex-shrink  rounded bg-green-500 hover:bg-gradient-to-r hover:from-green-500 hover:to-green-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-green-400 transition-all ease-out duration-300 " +
+                        (isMobile ? "w-1/4 px-0 py-2" : "w-1/2 px-4 py-2")
+                    }
                     onClick={() => {
                         table.setCreatingRow(
                             createRow(table, {})
@@ -614,11 +627,19 @@ export default function Table() {
                 </button>
                 {session.data?.user.role === "admin" && (
                     <Link
-                        className="flex-grow flex-shrink w-1/2 ml-4 px-4 py-2 rounded bg-blue-500 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-blue-400 transition-all ease-out duration-300"
+                        className={
+                            "flex-grow flex-shrink ml-4 px-4 py-2 rounded bg-blue-500 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-blue-400 transition-all ease-out duration-300 " +
+                            (isMobile ? "w-1/4" : "w-1/2")
+                        }
                         href="/dashboard"
-                        style={{whiteSpace: "nowrap"}}
+                        style={{
+                            whiteSpace: isMobile ? "normal" : "nowrap",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                        }}
                     >
-                        <span className="relative text-center">Панель адміністратора</span>
+                        <span className={"relative text-center"}>Панель адміністратора</span>
                     </Link>
                 )}
             </div>
@@ -639,7 +660,11 @@ export default function Table() {
     function useCreateTableData() {
         return useMutation({
             mutationFn: async (tableData: TableData) => {
-                const formattedTableData = {...tableData}
+                const formattedTableData = {
+                    ...tableData,
+                    // @ts-ignore
+                    id: tableData.id.props.children[0].props.children,
+                }
 
                 delete formattedTableData.isLeased
                 delete formattedTableData.rent
@@ -660,7 +685,11 @@ export default function Table() {
     function useUpdateTableData() {
         return useMutation({
             mutationFn: async (tableData: TableData) => {
-                const formattedTableData = {...tableData}
+                const formattedTableData = {
+                    ...tableData,
+                    // @ts-ignore
+                    id: tableData.id.props.children[0].props.children,
+                }
 
                 delete formattedTableData.isLeased
                 delete formattedTableData.rent
@@ -704,90 +733,54 @@ export default function Table() {
                 primaryShade: 9,
             }}
         >
-            {deleteModalOpen && <Transition.Root show={deleteModalOpen} as={Fragment}>
-                <Dialog as="div" className="relative z-10" initialFocus={cancelButtonRef} onClose={setDeleteModalOpen}>
-                    <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
-                    >
-                        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"/>
-                    </Transition.Child>
-
-                    <div className="fixed inset-0 z-10 w-screen overflow-y-auto">
+            <Modal
+                opened={openedDeleteModal}
+                onClose={() => {
+                    setDeleteModalData(null)
+                    closeDeleteModal()
+                }}
+                size="xs"
+            >
+                <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+                    <div className="sm:flex sm:items-start">
                         <div
-                            className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-                            <Transition.Child
-                                as={Fragment}
-                                enter="ease-out duration-300"
-                                enterFrom="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                                enterTo="opacity-100 translate-y-0 sm:scale-100"
-                                leave="ease-in duration-200"
-                                leaveFrom="opacity-100 translate-y-0 sm:scale-100"
-                                leaveTo="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-                            >
-                                <Dialog.Panel
-                                    className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-                                    <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
-                                        <div className="sm:flex sm:items-start">
-                                            <div
-                                                className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                                                <ExclamationTriangleIcon
-                                                    className="h-6 w-6 text-red-600"
-                                                    aria-hidden="true"
-                                                />
-                                            </div>
-                                            <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
-                                                <Dialog.Title as="h3"
-                                                              className="text-base font-semibold leading-6 text-gray-900">
-                                                    Видалення інформації
-                                                </Dialog.Title>
-                                                <div className="mt-2">
-                                                    <p className="text-sm text-gray-500">
-                                                        Ви дійсно бажаєте видалити цю інформацію?
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                                        <button
-                                            type="button"
-                                            className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
-                                            onClick={async () => {
-                                                setDeleteModalOpen(false)
-                                                await toast.promise(
-                                                    deleteTableData(Number(deleteModalTableData?.id)),
-                                                    {
-                                                        loading: <b>Видаяється...</b>,
-                                                        success: <b>Інформацію успішно видалено!</b>,
-                                                        error: <b>Виникла помилка.</b>,
-                                                    }
-                                                )
-                                                setDeleteModalTableData(null)
-                                            }}
-                                        >
-                                            Видалити
-                                        </button>
-                                        <button
-                                            type="button"
-                                            className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
-                                            onClick={() => setDeleteModalOpen(false)}
-                                            ref={cancelButtonRef}
-                                        >
-                                            Відмінити
-                                        </button>
-                                    </div>
-                                </Dialog.Panel>
-                            </Transition.Child>
+                            className="mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10"
+                        >
+                            <ExclamationTriangleIcon className="h-6 w-6 text-red-600" aria-hidden="true"/>
+                        </div>
+                        <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                            <h3 className="text-base font-semibold leading-6 text-gray-900">Видалення інформації</h3>
+                            <div className="mt-2">
+                                <p className="text-sm text-gray-500">Ви дійсно бажаєте видалити цю інформацію?</p>
+                            </div>
                         </div>
                     </div>
-                </Dialog>
-            </Transition.Root>}
+                </div>
+                <div className="m-0 bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+                    <button
+                        type="button"
+                        className="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
+                        onClick={async () => {
+                            closeDeleteModal()
+                            await toast.promise(deleteTableData(Number(deleteModalData?.id)), {
+                                loading: <b>Видаяється...</b>,
+                                success: <b>Інформацію успішно видалено!</b>,
+                                error: <b>Виникла помилка.</b>,
+                            })
+                            setDeleteModalData(null)
+                        }}
+                    >
+                        Видалити
+                    </button>
+                    <button
+                        type="button"
+                        className="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto"
+                        onClick={closeDeleteModal}
+                    >
+                        Відмінити
+                    </button>
+                </div>
+            </Modal>
             <Modal
                 opened={openedRentModal}
                 onClose={() => {
