@@ -480,7 +480,7 @@ export default function Table() {
                 size: 500,
                 ...columnBlue
             },
-        ], [fetchedData, filteredData, totalNGO, totalArea, leasedStats, rentPayments, slidersRange.ngo, slidersRange.area, slidersRange.expenses]
+        ], [fetchedData, filteredData, totalNGO, totalArea, leasedStats, rentPayments, slidersRange.ngo.min, slidersRange.ngo.max, slidersRange.area.min, slidersRange.area.max, slidersRange.expenses.min, slidersRange.expenses.max]
     )
 
     const handleCreateTableData = async ({values, table}: any) => {
