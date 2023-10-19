@@ -87,6 +87,9 @@ export default function Table() {
 
     useEffect(() => {
         if (fetchedData.length > 0) {
+            // @ts-ignore
+            setFilteredData(table.getFilteredRowModel().rows)
+
             setSlidersRange({
                 area: {
                     min: Math.min(...fetchedData.map((e: any) => parseFloat(e.area) || 0)) || 0,
