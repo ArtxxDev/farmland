@@ -85,6 +85,25 @@ export default function Table() {
         }
     }, [])
 
+    useEffect(() => {
+        if (fetchedData.length > 0) {
+            setSlidersRange({
+                area: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.area) || 0)),
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.area) || 0)),
+                },
+                ngo: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)),
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)),
+                },
+                expenses: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)),
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)),
+                }
+            })
+        }
+    }, [fetchedData])
+
     // Set filteredData and slidersRange on columnFilters change
     useEffect(() => {
         // @ts-ignore
@@ -93,16 +112,16 @@ export default function Table() {
         if (fetchedData.length > 0) {
             setSlidersRange({
                 area: {
-                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.area) || 0)) || 0,
-                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.area) || 0)) || 100
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.area) || 0)),
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.area) || 0)),
                 },
                 ngo: {
-                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)) || 0,
-                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)) || 250000
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)),
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)),
                 },
                 expenses: {
-                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 0,
-                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 10000,
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)),
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)),
                 }
             })
         }
@@ -461,7 +480,7 @@ export default function Table() {
                 size: 500,
                 ...columnBlue
             },
-        ], [filteredData, slidersRange, totalNGO, totalArea, leasedStats, rentPayments]
+        ], [fetchedData, filteredData, slidersRange, totalNGO, totalArea, leasedStats, rentPayments]
     )
 
     const handleCreateTableData = async ({values, table}: any) => {
