@@ -85,6 +85,25 @@ export default function Table() {
         }
     }, [])
 
+    useEffect(() => {
+        if (fetchedData.length > 0) {
+            setSlidersRange({
+                area: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.area) || 0)) || 0,
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.area) || 0)) || 100
+                },
+                ngo: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)) || 0,
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)) || 250000
+                },
+                expenses: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 0,
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 10000,
+                }
+            })
+        }
+    }, [fetchedData])
+
     // Set filteredData and slidersRange on columnFilters change
     useEffect(() => {
         // @ts-ignore
