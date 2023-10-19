@@ -13,7 +13,23 @@ export default withAuth(
                 NextResponse.redirect(new URL('/', req.url)) : NextResponse.next()
         } else if (pathname === "/api/users") {
             return !req.nextauth.token || req.nextauth.token.role !== "admin" ?
-                new NextResponse("Insufficient privileges", {status: 403}) : NextResponse.next()
+                new NextResponse("Недостатньо прав.", {status: 403}) : NextResponse.next()
+        } else if (pathname === "/api/table") {
+            if (req.nextauth.token?.role !== "user" && req.nextauth.token?.role !== "admin") {
+                return new NextResponse("Недостатньо прав.", {status: 403})
+            }
+
+            if (req.method === "PUT") {
+                if (req.nextauth.token?.role !== "admin") {
+                    return new NextResponse("Недостатньо прав.", {status: 403})
+                }
+            } else if (req.method === "DELETE") {
+                if (req.nextauth.token?.role !== "admin") {
+                    return new NextResponse("Недостатньо прав.", {status: 403})
+                }
+            }
+
+            return NextResponse.next()
         }
     }, {
         callbacks: {

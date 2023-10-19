@@ -8,7 +8,7 @@ interface InputProps
     label?: string;
 }
 
-const Input = ({type, id, name, label, placeholder, autofocus, onChange, ...props}: InputProps) => {
+const Input = ({type, id, name, label, placeholder, autofocus, onChange}: InputProps) => {
     return (
         <label className="text-gray-500 block mt-3">{label}
             <input

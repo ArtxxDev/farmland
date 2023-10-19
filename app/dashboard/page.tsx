@@ -1,10 +1,10 @@
 "use client"
 
-// import {useSession} from "next-auth/react"
+import {useSession} from "next-auth/react"
 import {getUsers} from "@/app/utils/clientRequests"
-import React, {Fragment, useMemo, useRef, useState} from "react"
-import {MantineReactTable, MRT_ColumnDef, MRT_Row, useMantineReactTable} from "mantine-react-table"
-import {ActionIcon, Flex, MantineProvider, Tooltip, useMantineTheme} from "@mantine/core"
+import React, {Fragment, useEffect, useMemo, useRef, useState} from "react"
+import {MantineReactTable, MRT_Row, useMantineReactTable} from "mantine-react-table"
+import {ActionIcon, Box, MantineProvider, Tooltip, useMantineTheme} from "@mantine/core"
 import {IconEdit, IconTrash} from "@tabler/icons-react"
 import toast from "react-hot-toast"
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query"
@@ -16,9 +16,10 @@ import Link from "next/link"
 import localization from "@/constants/tableLocalization"
 
 export default function Dashboard() {
-    // const session = useSession()
     const queryClient = useQueryClient()
     const {colorScheme} = useMantineTheme()
+
+    const [isMobile, setIsMobile] = useState(false)
 
     const [modalOpen, setModalOpen] = useState(false)
     const cancelButtonRef = useRef(null)
@@ -33,25 +34,37 @@ export default function Dashboard() {
     const {mutateAsync: updateUser, isLoading: isUpdatingUser} = useUpdateUser()
     const {mutateAsync: deleteUser, isLoading: isDeletingUser} = useDeleteUser()
 
-    const columns = useMemo<MRT_ColumnDef<UserPublic>[]>(
+    useEffect(() => {
+        const handleResize = () => {
+            setIsMobile(window.innerWidth <= 768)
+        }
+
+        handleResize()
+        window.addEventListener('resize', handleResize)
+
+        return () => {
+            window.removeEventListener('resize', handleResize)
+        }
+    }, [])
+
+    const columns = useMemo(
         () => [
             {
                 accessorKey: "id",
                 header: "ID",
-                size: 40,
+                size: isMobile ? 20 : 50,
                 enableEditing: false,
             },
             {
                 accessorKey: "email",
                 header: "Електронна пошта",
-                size: 50,
+                size: isMobile ? 65 : 260,
             },
             {
                 accessorKey: "role",
                 header: "Роль",
-                size: 50,
+                size: isMobile ? 35 : 140,
                 editVariant: "select",
-                // Edit: ({cell, column, table}) => <div>edit</div>,
                 mantineEditSelectProps: {
                     data: ["guest", "user", "admin"]
                 }
@@ -98,7 +111,7 @@ export default function Dashboard() {
         editDisplayMode: "row",
         localization: localization,
         renderRowActions: ({row, table}) => (
-            <Flex gap="md">
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center'}}>
                 <Tooltip label="Відредагувати">
                     <ActionIcon onClick={() => table.setEditingRow(row)}>
                         <IconEdit/>
@@ -109,8 +122,9 @@ export default function Dashboard() {
                         <IconTrash/>
                     </ActionIcon>
                 </Tooltip>
-            </Flex>
+            </div>
         ),
+        layoutMode: "semantic",
         mantineTableProps: {
             highlightOnHover: true,
             withColumnBorders: true,
@@ -130,6 +144,7 @@ export default function Dashboard() {
         displayColumnDefOptions: {
             "mrt-row-actions": {
                 header: "",
+                size: isMobile ? 25 : 100,
             },
         },
         mantineTableBodyCellProps: {
@@ -299,17 +314,16 @@ export default function Dashboard() {
                     </div>
                 </Dialog>
             </Transition.Root>}
-            <div className="w-1/3 min-w-fit">
-                    <MantineReactTable table={table}/>
+            <div className="usersTable">
+                <MantineReactTable table={table}/>
             </div>
             <div className="flex">
                 <Link
                     className="relative mt-5 ml-1.5 rounded px-5 py-2.5 overflow-hidden group bg-blue-500 hover:bg-gradient-to-r hover:from-blue-500 hover:to-blue-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-blue-400 transition-all ease-out duration-300"
                     href="/"
                 >
-                        <span
-                            className="absolute right-0 w-8 h-32 -mt-12 transition-all duration-1000 transform translate-x-12 bg-white opacity-10 rotate-12 group-hover:-translate-x-40 ease">
-                        </span>
+                    <span
+                        className="absolute right-0 w-8 h-32 -mt-12 transition-all duration-1000 transform translate-x-12 bg-white opacity-10 rotate-12 group-hover:-translate-x-40 ease"/>
                     <span className="relative">Головна сторінка</span>
                 </Link>
             </div>

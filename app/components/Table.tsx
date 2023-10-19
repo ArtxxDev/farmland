@@ -1,6 +1,6 @@
 "use client"
 
-import React, {Fragment, useEffect, useMemo, useRef, useState} from "react"
+import React, {useEffect, useMemo, useState} from "react"
 import {useSession} from "next-auth/react"
 import toast from "react-hot-toast"
 import {
@@ -12,9 +12,8 @@ import {
 import {ActionIcon, Box, Flex, Input, MantineProvider, Modal, Stack, Tooltip, Pagination} from "@mantine/core"
 import {getTable} from "@/app/utils/clientRequests"
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query"
-import {TableData, RentDetails, RentPayments} from "@/types/interfaces"
+import {TableData, RentPayments} from "@/types/interfaces"
 import {IconEdit, IconTrash} from "@tabler/icons-react"
-import {ExclamationTriangleIcon} from "@heroicons/react/24/outline"
 import Link from "next/link"
 import {dateRange, range, rangeSlider} from "@/app/utils/filterFunctions"
 import {oblastList} from "@/constants/filterSelectProps"
@@ -29,7 +28,7 @@ import {useDisclosure} from "@mantine/hooks"
 import localization from "@/constants/tableLocalization"
 import {notifyError} from "@/app/utils/notifications"
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments"
-import ExclamationIcon from "@/app/components/ExclamationIcon";
+import ExclamationIcon from "@/app/components/ExclamationIcon"
 
 dayjs.extend(customParseFormat)
 
@@ -49,11 +48,18 @@ export default function Table() {
     const [rentPeriodInput, setRentPeriodInput] = useState<number>(0)
     const [rentPriceInput, setRentPriceInput] = useState<number>(0)
 
-    const [rentDetails, setRentDetails] = useState<(RentDetails[] | null)>(null)
     const [rentPayments, setRentPayments] = useState<(RentPayments[])>([])
     const [editedRentPayments, setEditedRentPayments] = useState<(RentPayments[])>([])
     const [editedRowIndex, setEditedRowIndex] = useState(-1)
     const [rentPaymentsActivePage, setRentPaymentActivePage] = useState(1)
+
+    const [columnFilters, setColumnFilters] = useState([])
+    const [filteredData, setFilteredData] = useState([])
+    const [slidersRange, setSlidersRange] = useState({
+        area: {min: 0, max: 100},
+        ngo: {min: 0, max: 250000},
+        expenses: {min: 0, max: 10000}
+    })
 
     const {
         data: fetchedData = [],
@@ -79,30 +85,56 @@ export default function Table() {
         }
     }, [])
 
+    // Set filteredData and slidersRange on columnFilters change
+    useEffect(() => {
+        // @ts-ignore
+        setFilteredData(table.getFilteredRowModel().rows)
+
+        if (fetchedData.length > 0) {
+            setSlidersRange({
+                area: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.area) || 0)) || 0,
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.area) || 0)) || 100
+                },
+                ngo: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)) || 0,
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.ngo) || 0)) || 250000
+                },
+                expenses: {
+                    min: Math.min(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 0,
+                    max: Math.max(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 10000,
+                }
+            })
+        }
+    }, [columnFilters])
+
     // Total NGO footer
     const totalNGO = useMemo(() => {
-        return fetchedData.reduce((a, b: any) => {
-            return !isNaN(parseFloat(b.ngo)) ? a + parseFloat(b.ngo) : a
+        return filteredData.reduce((a, b: any) => {
+            return !isNaN(parseFloat(b.original.ngo)) ? a + parseFloat(b.original.ngo) : a
         }, 0)
-    }, [fetchedData])
+    }, [filteredData])
+
     // Total Area footer
     const totalArea = useMemo(() => {
-        return fetchedData.reduce((a, b: any) => {
-            return !isNaN(parseFloat(b.area)) ? a + parseFloat(b.area) : a
+        return filteredData.reduce((a, b: any) => {
+            return !isNaN(parseFloat(b.original.area)) ? a + parseFloat(b.original.area) : a
         }, 0)
-    }, [fetchedData])
+    }, [filteredData])
+
     // Leased chart pie stats
     const leasedStats = useMemo(
         () => {
-            const leased = fetchedData.filter(item => item.contract_lease).length
-            const notLeased = fetchedData.length - leased
-            const totalCount = fetchedData.length
+            //@ts-ignore
+            const leased = filteredData.filter(item => item.original.contract_lease).length
+            const notLeased = filteredData.length - leased
+            const totalCount = filteredData.length
 
             const leasedPercentage = Number(((leased / totalCount) * 100).toFixed(2))
             const notLeasedPercentage = Number(((notLeased / totalCount) * 100).toFixed(2))
 
             return [leasedPercentage, notLeasedPercentage]
-        }, [fetchedData]
+        }, [filteredData]
     )
 
     // Initial Rent Payments (from DB)
@@ -240,8 +272,8 @@ export default function Table() {
                     precision: 4,
                     minRange: 0.1,
                     step: 0.1,
-                    min: 0,
-                    max: 100,
+                    min: slidersRange.area.min,
+                    max: slidersRange.area.max,
                     thumbSize: 15,
                 },
                 Cell: ({cell}: any) => cell.getValue(),
@@ -260,9 +292,10 @@ export default function Table() {
                 filterFn: "rangeSlider",
                 mantineFilterRangeSliderProps: () => ({
                     size: "lg",
-                    minRange: 100,
-                    min: 0,
-                    max: 250000,
+                    precision: 4,
+                    minRange: 1,
+                    min: slidersRange.ngo.min,
+                    max: slidersRange.ngo.max,
                     thumbSize: 15
                 }),
                 Footer: () => (
@@ -327,8 +360,8 @@ export default function Table() {
                 mantineFilterRangeSliderProps: () => ({
                     size: "lg",
                     minRange: 10,
-                    min: 0,
-                    max: 10000,
+                    min: slidersRange.expenses.min,
+                    max: slidersRange.expenses.max,
                     thumbSize: 15
                 }),
             },
@@ -428,7 +461,7 @@ export default function Table() {
                 size: 500,
                 ...columnBlue
             },
-        ], [totalNGO, totalArea, leasedStats, rentDetails, rentPayments]
+        ], [filteredData, totalNGO, totalArea, leasedStats, rentPayments]
     )
 
     const handleCreateTableData = async ({values, table}: any) => {
@@ -563,6 +596,8 @@ export default function Table() {
         enableHiding: false,
         onEditingRowSave: handleSaveTableData,
         onCreatingRowSave: handleCreateTableData,
+        // @ts-ignore
+        onColumnFiltersChange: setColumnFilters,
         getRowId: (row: any) => row.id,
         mantineTableBodyRowProps: ({row}) => ({
             onDoubleClick: () => {
@@ -586,7 +621,7 @@ export default function Table() {
             },
         },
         renderRowActions: ({row, table}) => (
-            <Flex gap="md">
+            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center'}}>
                 <Tooltip label="Відредагувати">
                     <ActionIcon onClick={() => table.setEditingRow(row)}>
                         <IconEdit/>
@@ -597,7 +632,7 @@ export default function Table() {
                         <IconTrash/>
                     </ActionIcon>
                 </Tooltip>
-            </Flex>
+            </div>
         ),
         filterFns: {
             dateRange: dateRange,
@@ -605,6 +640,7 @@ export default function Table() {
             rangeSlider: rangeSlider
         },
         state: {
+            columnFilters: columnFilters,
             isLoading: isLoadingData,
             isSaving: isCreatingTableData || isUpdatingTableData || isDeletingTableData,
             showAlertBanner: isLoadingDataError,

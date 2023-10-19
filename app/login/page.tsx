@@ -44,8 +44,8 @@ export default function Login() {
     }
 
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = event.target;
-        setFormValues({ ...formValues, [name]: value });
+        const { name, value } = event.target
+        setFormValues({ ...formValues, [name]: value })
     }
 
     return (

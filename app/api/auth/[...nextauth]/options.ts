@@ -59,7 +59,7 @@ const authOptions: NextAuthOptions = {
 
     callbacks: {
         // @ts-ignore
-        async session({session, token}) {
+        async session({token, trigger, session}) {
             return {
                 ...session,
                 user: {
@@ -69,8 +69,15 @@ const authOptions: NextAuthOptions = {
                 }
             }
         },
-        async jwt({token, user}) {
-            if (user) {
+        async jwt({token, user, session}) {
+            const dbUser = await prisma.user.findUnique({
+                where: {
+                    // @ts-ignore
+                    email: token.email
+                }
+            })
+
+            if (!dbUser) {
                 const u = user as unknown as User
                 return {
                     ...token,
@@ -78,7 +85,12 @@ const authOptions: NextAuthOptions = {
                     role: u.role
                 }
             }
-            return token
+
+            return {
+                id: dbUser.id,
+                email: dbUser.email,
+                role: dbUser.role
+            }
         },
     },
 

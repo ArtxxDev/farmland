@@ -1,4 +1,4 @@
-import {IconAlertTriangle} from '@tabler/icons-react';
+import {IconAlertTriangle} from '@tabler/icons-react'
 
 function ExclamationIcon({width, height, style}: { width: number, height: number, style?: React.CSSProperties }) {
     const defaultStyle = {

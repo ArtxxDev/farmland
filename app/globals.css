@@ -33,6 +33,16 @@
     }
 }
 
+.usersTable {
+    width: 600px;
+}
+
+@media (max-width: 768px) {
+    .usersTable {
+        width: 100vw
+    }
+}
+
 .clickable-cell {
     cursor: pointer
 }

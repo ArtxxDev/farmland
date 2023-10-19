@@ -32,13 +32,13 @@ export const rentPaymentsInitial = (rentDetails: RentDetails) => {
 
 
 export const calculateRentPayments = (rentDetails: RentDetails): RentPayments[] => {
-    let { rentAdvance, rentPeriod, rentPrice, contractLeaseDate, rentPayments } = rentDetails
+    let {rentPeriod, rentPrice, contractLeaseDate, rentPayments } = rentDetails
 
     if (rentPeriod > 50) {
         rentPeriod = 50
     }
 
-    const calculatedPayments: RentPayments[] = [];
+    const calculatedPayments: RentPayments[] = []
 
     for (let i = 0; i < rentPeriod; i++) {
         if (i < rentPayments.length) {
@@ -50,12 +50,11 @@ export const calculateRentPayments = (rentDetails: RentDetails): RentPayments[] 
                 rentYear: dayjs(contractLeaseDate).year() + i,
                 rentPrice: rentPrice,
                 rentIsPaid: false,
-            };
+            }
 
-            calculatedPayments.push(rentRow);
+            calculatedPayments.push(rentRow)
         }
     }
 
-    return calculatedPayments;
-};
-
+    return calculatedPayments
+}
