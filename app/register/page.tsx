@@ -42,11 +42,6 @@ export default function Register() {
         }
     }
 
-    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-        const {name, value} = event.target;
-        setFormValues({...formValues, [name]: value});
-    }
-
     return (
         <div className="relative overflow-hidden bg-cover bg-no-repeat p-12 h-screen w-screen"
              style={{backgroundImage: 'url("/bg.jpg")'}}
@@ -69,7 +64,7 @@ export default function Register() {
                             placeholder="email@example.com"
                             autofocus={true}
                             value={formValues.email}
-                            onChange={handleChange}
+                            onChange={(e) => setFormValues({...formValues, email: e.target.value})}
                         />
                         <Input
                             required
@@ -79,7 +74,7 @@ export default function Register() {
                             label="Пароль"
                             placeholder="••••••••••"
                             value={formValues.password}
-                            onChange={handleChange}
+                            onChange={(e) => setFormValues({...formValues, password: e.target.value})}
                         />
                         <Button value="submit">Зареєструватися</Button>
                     </form>

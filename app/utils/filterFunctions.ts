@@ -59,3 +59,13 @@ export const range = (row: any, id: any, filterValue: any) => {
 
     return true
 }
+
+export const leasedFilterFn = (row: any, id: any, filterValue: any) => {
+    const iconName = row._valuesCache.isLeased ? row._valuesCache.isLeased.type.name : null
+
+    return (filterValue === "true" && iconName === "TickIcon") || (filterValue === "false" && iconName === "CrossIcon")
+}
+
+export const documentFilterFn = (row: any, id: any, filterValue: any) => {
+    return (filterValue === "true" && row.getValue(id)) || (filterValue === "false" && !row.getValue(id))
+}

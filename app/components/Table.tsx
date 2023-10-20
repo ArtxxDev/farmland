@@ -9,13 +9,13 @@ import {
     useMantineReactTable,
     createRow
 } from "mantine-react-table"
-import {ActionIcon, Box, Flex, Input, MantineProvider, Modal, Stack, Tooltip, Pagination} from "@mantine/core"
+import {ActionIcon, Box, Input, MantineProvider, Modal, Stack, Tooltip, Pagination} from "@mantine/core"
 import {getTable} from "@/app/utils/clientRequests"
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query"
 import {TableData, RentPayments} from "@/types/interfaces"
 import {IconEdit, IconTrash} from "@tabler/icons-react"
 import Link from "next/link"
-import {dateRange, range, rangeSlider} from "@/app/utils/filterFunctions"
+import {dateRange, documentFilterFn, leasedFilterFn, range, rangeSlider} from "@/app/utils/filterFunctions"
 import {oblastList} from "@/constants/filterSelectProps"
 import {columnBlue} from "@/constants/commonColumnProps"
 import dayjs from "dayjs"
@@ -391,6 +391,7 @@ export default function Table() {
                 header: "Наявність відсканованих документів",
                 accessorKey: "document_land",
                 filterVariant: "checkbox",
+                filterFn: documentFilterFn,
                 size: 500,
             },
             {
@@ -473,6 +474,19 @@ export default function Table() {
                 enableEditing: false,
                 accessorFn: (originalRow: any) => originalRow.contract_lease ?
                     <TickIcon width={32} height={32}/> : <CrossIcon width={32} height={32}/>,
+                filterVariant: "checkbox",
+                filterFn: leasedFilterFn,
+                mantineFilterCheckboxProps: {
+                    label: "",
+                    size: "lg",
+                    style: {
+                        position: "relative",
+                        marginTop: "30px",
+                        top: "50%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                    },
+                },
                 Footer: () => <PieChart values={leasedStats}/>,
                 ...columnBlue
             },
@@ -480,6 +494,7 @@ export default function Table() {
                 header: "Наявність відсканованих документів",
                 accessorKey: "document_land_lease",
                 filterVariant: "checkbox",
+                filterFn: documentFilterFn,
                 size: 500,
                 ...columnBlue
             },
@@ -659,7 +674,9 @@ export default function Table() {
         filterFns: {
             dateRange: dateRange,
             range: range,
-            rangeSlider: rangeSlider
+            rangeSlider: rangeSlider,
+            leasedFilterFn: leasedFilterFn,
+            documentFilterFn: documentFilterFn,
         },
         state: {
             columnFilters: columnFilters,

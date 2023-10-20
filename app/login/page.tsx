@@ -2,7 +2,7 @@
 
 import Button from "@/app/components/Button"
 import {signIn} from "next-auth/react"
-import React, {ChangeEvent, useState} from "react"
+import React, {useState} from "react"
 import {useRouter} from "next/navigation"
 import Input from "@/app/components/Input"
 import {notifyError} from "@/app/utils/notifications"
@@ -14,6 +14,7 @@ type FormValues = {
 
 export default function Login() {
     const router = useRouter()
+
     const [formValues, setFormValues] = useState<FormValues>({
         email: "",
         password: "",
@@ -23,8 +24,6 @@ export default function Login() {
         e.preventDefault()
 
         try {
-            setFormValues({email: "", password: ""})
-
             const result = await signIn("credentials", {
                 email: formValues.email,
                 password: formValues.password,
@@ -41,11 +40,6 @@ export default function Login() {
         } catch (error: any) {
             notifyError(JSON.stringify(error))
         }
-    }
-
-    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = event.target
-        setFormValues({ ...formValues, [name]: value })
     }
 
     return (
@@ -69,7 +63,7 @@ export default function Login() {
                             placeholder="email@example.com"
                             autofocus={true}
                             value={formValues.email}
-                            onChange={handleChange}
+                            onChange={(e) => setFormValues({...formValues, email: e.target.value})}
                         />
                         <Input
                             required
@@ -79,7 +73,7 @@ export default function Login() {
                             label="Пароль"
                             placeholder="••••••••••"
                             value={formValues.password}
-                            onChange={handleChange}
+                            onChange={(e) => setFormValues({...formValues, password: e.target.value})}
                         />
                         <Button value="submit">Увійти</Button>
                     </form>
