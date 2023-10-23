@@ -63,7 +63,7 @@ export const range = (row: any, id: any, filterValue: any) => {
 export const leasedFilterFn = (row: any, id: any, filterValue: any) => {
     const iconName = row._valuesCache.isLeased ? row._valuesCache.isLeased.type.name : null
 
-    return (filterValue === "true" && iconName.includes("TickIcon")) || (filterValue === "false" && iconName.includes("CrossIcon"))
+    return (filterValue === "true" && iconName && iconName.includes("TickIcon")) || (filterValue === "false" && iconName && iconName.includes("CrossIcon"))
 }
 
 export const documentFilterFn = (row: any, id: any, filterValue: any) => {
