@@ -29,6 +29,8 @@ import localization from "@/constants/tableLocalization"
 import {notifyError} from "@/app/utils/notifications"
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments"
 import ExclamationIcon from "@/app/components/ExclamationIcon"
+import {DatePickerInput} from "@mantine/dates"
+import isValidDate from "@/app/utils/isValidDate";
 
 dayjs.extend(customParseFormat)
 
@@ -147,7 +149,6 @@ export default function Table() {
 
     // Total Rent footer
     const totalRent = useMemo(() => {
-        console.log(filteredData)
         return filteredData.reduce((a, b: any) => {
             return !isNaN(parseFloat(b._valuesCache.rent)) ? a + parseFloat(b._valuesCache.rent) : a
         }, 0)
@@ -182,11 +183,15 @@ export default function Table() {
         }
     }, [openedRentModal])
 
-    const dateToLocalFormat = (date: any) => date.toLocaleDateString("ru-RU", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric"
-    })
+    const dateToLocalFormat = (date: any) => {
+        if (!date) return ""
+
+        return date.toLocaleDateString("ru-RU", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+        })
+    }
 
     const calculateRentValue = (row: any) => {
         if (!row.rent_payments) {
@@ -246,7 +251,52 @@ export default function Table() {
         )
     }
 
-    function useEdit<TData extends Record<string, any>>(props: any) {
+    function useEditDate(props: any) {
+        const {
+            cell,
+            column,
+            row,
+            table
+        } = props
+        const {
+            getState,
+            setEditingCell,
+            setEditingRow,
+            setCreatingRow
+        } = table
+        const {
+            editingRow,
+            creatingRow
+        } = getState()
+
+        const isCreating = creatingRow?.id === row.id
+        const isEditing = editingRow?.id === row.id
+
+        const initialValue = isValidDate(cell.getValue()) ? dayjs(cell.getValue(), "DD.MM.YYYY").toDate() : cell.getValue()
+
+        const [value, setValue] = useState(() => initialValue || null)
+
+        const handleOnChange = (newValue: any) => {
+            row._valuesCache[column.id] = dateToLocalFormat(newValue)
+
+            if (isCreating) {
+                setCreatingRow(row)
+            } else if (isEditing) {
+                setEditingRow(row)
+            }
+
+            setValue(newValue)
+        }
+
+        const handleBlur = () => {
+            setEditingCell(null)
+        }
+
+        return {value, handleOnChange, handleBlur}
+    }
+
+
+    function useEdit(props: any) {
         const {
             cell,
             column,
@@ -268,29 +318,47 @@ export default function Table() {
         const isCreating = creatingRow?.id === row.id
         const isEditing = editingRow?.id === row.id
 
-        const handleOnChange = (newValue: unknown) => {
+        const handleOnChange = (newValue: any) => {
             //@ts-ignore
             row._valuesCache[column.id] = newValue
             if (isCreating) setCreatingRow(row)
             else if (isEditing) setEditingRow(row)
             setValue(newValue)
-        };
+        }
 
         const handleBlur = () => {
             setEditingCell(null)
-        };
+        }
 
-        return { value, handleOnChange, handleBlur }
+        return {value, handleOnChange, handleBlur}
     }
 
     function EditTextArea(props: any) {
-        const { value, handleOnChange, handleBlur } = useEdit(props)
+        const {value, handleOnChange, handleBlur} = useEdit(props)
 
         return (
             <Textarea
-                value={value}
+                placeholder={props.column.columnDef.header}
+                value={value || ""}
                 onBlur={handleBlur}
                 onChange={(e) => handleOnChange(e.currentTarget.value)}
+            />
+        )
+    }
+
+    function EditDateRange(props: any) {
+        const {value, handleOnChange, handleBlur} = useEditDate(props)
+
+        return (
+            <DatePickerInput
+                dropdownType="modal"
+                placeholder={props.column.columnDef.header}
+                locale="ru"
+                valueFormat="DD.MM.YYYY"
+                value={value}
+                onBlur={handleBlur}
+                onChange={(newValue) => handleOnChange(newValue)}
+                clearable
             />
         )
     }
@@ -363,7 +431,7 @@ export default function Table() {
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
                         Загальна площа
-                        <Box color="orange">{totalArea.toFixed(2)}</Box>
+                        <Box>{totalArea.toFixed(2)}</Box>
                     </Stack>
                 ),
             },
@@ -384,7 +452,7 @@ export default function Table() {
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
                         Загальне НГО
-                        <Box color="orange">{totalNGO.toFixed(2)} ₴</Box>
+                        <Box>{totalNGO.toFixed(2)} ₴</Box>
                     </Stack>
                 ),
             },
@@ -411,7 +479,10 @@ export default function Table() {
                 Cell: ({cell}: any) => cell.getValue(),
                 mantineFilterDateInputProps: {
                     locale: "ru",
-                    valueFormat: "DD.MM.YYYY"
+                    valueFormat: "DD.MM.YYYY",
+                },
+                Edit: (props) => {
+                    return <EditDateRange {...props} />
                 },
                 size: 350,
             },
@@ -430,6 +501,9 @@ export default function Table() {
                 mantineFilterDateInputProps: {
                     locale: "ru",
                     valueFormat: "DD.MM.YYYY"
+                },
+                Edit: (props) => {
+                    return <EditDateRange {...props} />
                 },
                 size: 350,
             },
@@ -453,7 +527,21 @@ export default function Table() {
                 accessorKey: "document_land",
                 filterVariant: "checkbox",
                 filterFn: documentFilterFn,
-                size: 500,
+                Cell: ({cell}) => {
+                    return cell.getValue() ? (
+                        <Textarea
+                            variant="unstyled"
+                            readOnly
+                            // @ts-ignore
+                            value={cell.getValue()}
+                            maxRows={2}
+                        />
+                    ) : ""
+                },
+                Edit: (props) => {
+                    return <EditTextArea {...props} />
+                },
+                size: 400,
             },
             {
                 header: "Орендар",
@@ -481,6 +569,9 @@ export default function Table() {
                 mantineFilterDateInputProps: {
                     locale: "ru",
                     valueFormat: "DD.MM.YYYY",
+                },
+                Edit: (props) => {
+                    return <EditDateRange {...props} />
                 },
                 size: 350,
                 ...columnBlue
@@ -530,7 +621,7 @@ export default function Table() {
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
                         Загальна орендна плата
-                        <Box color="orange">{totalRent.toFixed(2)} ₴</Box>
+                        <Box>{totalRent.toFixed(2)} ₴</Box>
                     </Stack>
                 ),
                 ...columnBlue
@@ -562,8 +653,7 @@ export default function Table() {
                 accessorKey: "document_land_lease",
                 filterVariant: "checkbox",
                 filterFn: documentFilterFn,
-                mantineEditTextInputProps: {},
-                Cell: ({ cell }) => {
+                Cell: ({cell}) => {
                     return cell.getValue() ? (
                         <Textarea
                             variant="unstyled"
@@ -572,15 +662,15 @@ export default function Table() {
                             value={cell.getValue()}
                             maxRows={2}
                         />
-                    ) : null
+                    ) : ""
                 },
                 Edit: (props) => {
                     return <EditTextArea {...props} />
                 },
-                size: 500,
+                size: 400,
                 ...columnBlue
             },
-        ], [fetchedData, filteredData, leasedStats, rentPayments]
+        ], [fetchedData, filteredData, rentPayments]
     )
 
     const handleCreateTableData = async ({values, table}: any) => {
@@ -727,9 +817,6 @@ export default function Table() {
                     const changedRow = {...row._valuesCache, id: null, isLeased: null}
 
                     table.setEditingRow(row)
-                } else {
-                    // await handleSaveTableData({values: row._valuesCache, table})
-                    table.setEditingRow(null)
                 }
             },
         }),
