@@ -9,7 +9,7 @@ import {
     useMantineReactTable,
     createRow
 } from "mantine-react-table"
-import {ActionIcon, Box, Input, MantineProvider, Modal, Stack, Tooltip, Pagination} from "@mantine/core"
+import {ActionIcon, Box, Input, MantineProvider, Modal, Stack, Tooltip, Pagination, Textarea} from "@mantine/core"
 import {getTable} from "@/app/utils/clientRequests"
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query"
 import {TableData, RentPayments} from "@/types/interfaces"
@@ -53,6 +53,7 @@ export default function Table() {
     const [editedRowIndex, setEditedRowIndex] = useState(-1)
     const [rentPaymentsActivePage, setRentPaymentActivePage] = useState(1)
 
+    const [editingRow, setEditingRow] = useState()
     const [columnFilters, setColumnFilters] = useState([])
     const [filteredData, setFilteredData] = useState([])
     const [slidersRange, setSlidersRange] = useState({
@@ -141,6 +142,14 @@ export default function Table() {
     const totalArea = useMemo(() => {
         return filteredData.reduce((a, b: any) => {
             return !isNaN(parseFloat(b.original.area)) ? a + parseFloat(b.original.area) : a
+        }, 0)
+    }, [filteredData])
+
+    // Total Rent footer
+    const totalRent = useMemo(() => {
+        console.log(filteredData)
+        return filteredData.reduce((a, b: any) => {
+            return !isNaN(parseFloat(b._valuesCache.rent)) ? a + parseFloat(b._valuesCache.rent) : a
         }, 0)
     }, [filteredData])
 
@@ -237,6 +246,55 @@ export default function Table() {
         )
     }
 
+    function useEdit<TData extends Record<string, any>>(props: any) {
+        const {
+            cell,
+            column,
+            row,
+            table
+        } = props
+        const {
+            getState,
+            setEditingCell,
+            setEditingRow,
+            setCreatingRow
+        } = table
+        const {
+            editingRow,
+            creatingRow
+        } = getState()
+
+        const [value, setValue] = useState(() => cell.getValue())
+        const isCreating = creatingRow?.id === row.id
+        const isEditing = editingRow?.id === row.id
+
+        const handleOnChange = (newValue: unknown) => {
+            //@ts-ignore
+            row._valuesCache[column.id] = newValue
+            if (isCreating) setCreatingRow(row)
+            else if (isEditing) setEditingRow(row)
+            setValue(newValue)
+        };
+
+        const handleBlur = () => {
+            setEditingCell(null)
+        };
+
+        return { value, handleOnChange, handleBlur }
+    }
+
+    function EditTextArea(props: any) {
+        const { value, handleOnChange, handleBlur } = useEdit(props)
+
+        return (
+            <Textarea
+                value={value}
+                onBlur={handleBlur}
+                onChange={(e) => handleOnChange(e.currentTarget.value)}
+            />
+        )
+    }
+
     const columns = useMemo<MRT_ColumnDef<TableData>[]>(() => [
             {
                 header: "ID",
@@ -267,6 +325,9 @@ export default function Table() {
                 mantineFilterMultiSelectProps: {
                     //@ts-ignore
                     data: [...new Set(fetchedData.map((e) => e.region ? e.region : null))]
+                },
+                Edit: (props) => {
+                    return <EditTextArea {...props} />
                 },
             },
             {
@@ -323,7 +384,7 @@ export default function Table() {
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
                         Загальне НГО
-                        <Box color="orange">{totalNGO.toFixed(2)}</Box>
+                        <Box color="orange">{totalNGO.toFixed(2)} ₴</Box>
                     </Stack>
                 ),
             },
@@ -466,6 +527,12 @@ export default function Table() {
                     </div>
                 ),
                 size: 200,
+                Footer: () => (
+                    <Stack className="flex flex-col justify-center items-center">
+                        Загальна орендна плата
+                        <Box color="orange">{totalRent.toFixed(2)} ₴</Box>
+                    </Stack>
+                ),
                 ...columnBlue
             },
             {
@@ -495,10 +562,25 @@ export default function Table() {
                 accessorKey: "document_land_lease",
                 filterVariant: "checkbox",
                 filterFn: documentFilterFn,
+                mantineEditTextInputProps: {},
+                Cell: ({ cell }) => {
+                    return cell.getValue() ? (
+                        <Textarea
+                            variant="unstyled"
+                            readOnly
+                            // @ts-ignore
+                            value={cell.getValue()}
+                            maxRows={2}
+                        />
+                    ) : null
+                },
+                Edit: (props) => {
+                    return <EditTextArea {...props} />
+                },
                 size: 500,
                 ...columnBlue
             },
-        ], [fetchedData, filteredData, totalNGO, totalArea, leasedStats, rentPayments, slidersRange.ngo.min, slidersRange.ngo.max, slidersRange.area.min, slidersRange.area.max, slidersRange.expenses.min, slidersRange.expenses.max]
+        ], [fetchedData, filteredData, leasedStats, rentPayments]
     )
 
     const handleCreateTableData = async ({values, table}: any) => {
@@ -635,10 +717,20 @@ export default function Table() {
         onCreatingRowSave: handleCreateTableData,
         // @ts-ignore
         onColumnFiltersChange: setColumnFilters,
+        // @ts-ignore
+        onEditingRowChange: setEditingRow,
         getRowId: (row: any) => row.id,
-        mantineTableBodyRowProps: ({row}) => ({
-            onDoubleClick: () => {
-                table.setEditingRow(row)
+        mantineTableBodyRowProps: ({table, row}) => ({
+            onDoubleClick: async () => {
+                if (!editingRow) {
+                    const originalRow = {...row.original, id: null, isLeased: null}
+                    const changedRow = {...row._valuesCache, id: null, isLeased: null}
+
+                    table.setEditingRow(row)
+                } else {
+                    // await handleSaveTableData({values: row._valuesCache, table})
+                    table.setEditingRow(null)
+                }
             },
         }),
         mantineTableProps: {
@@ -680,6 +772,7 @@ export default function Table() {
         },
         state: {
             columnFilters: columnFilters,
+            editingRow: editingRow,
             isLoading: isLoadingData,
             isSaving: isCreatingTableData || isUpdatingTableData || isDeletingTableData,
             showAlertBanner: isLoadingDataError,
