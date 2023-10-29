@@ -1,97 +1,109 @@
-"use client"
+"use client";
 
-import React, {useEffect, useMemo, useState} from "react"
-import {useSession} from "next-auth/react"
-import toast from "react-hot-toast"
+import React, {useEffect, useMemo, useState} from "react";
+import {useSession} from "next-auth/react";
+import toast from "react-hot-toast";
 import {
     MantineReactTable,
     type MRT_ColumnDef, MRT_Row,
     useMantineReactTable,
     createRow
-} from "mantine-react-table"
-import {ActionIcon, Box, Input, MantineProvider, Modal, Stack, Tooltip, Pagination, Textarea} from "@mantine/core"
-import {getTable} from "@/app/utils/clientRequests"
-import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query"
-import {TableData, RentPayments} from "@/types/interfaces"
-import {IconEdit, IconTrash} from "@tabler/icons-react"
-import Link from "next/link"
-import {dateRange, documentFilterFn, leasedFilterFn, range, rangeSlider} from "@/app/utils/filterFunctions"
-import {oblastList} from "@/constants/filterSelectProps"
-import {columnBlue} from "@/constants/commonColumnProps"
-import dayjs from "dayjs"
-import "dayjs/locale/ru"
-import customParseFormat from "dayjs/plugin/customParseFormat"
-import TickIcon from "@/app/components/TickIcon"
-import CrossIcon from "@/app/components/CrossIcon"
-import PieChart from "@/app/components/PieChart"
-import {useDisclosure} from "@mantine/hooks"
-import localization from "@/constants/tableLocalization"
-import {notifyError} from "@/app/utils/notifications"
-import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments"
-import ExclamationIcon from "@/app/components/ExclamationIcon"
-import {DatePickerInput} from "@mantine/dates"
-import isValidDate from "@/app/utils/isValidDate";
+} from "mantine-react-table";
+import {
+    ActionIcon,
+    Box,
+    Input,
+    MantineProvider,
+    Modal,
+    Stack,
+    Tooltip,
+    Pagination,
+    Textarea,
+    Text
+} from "@mantine/core";
+import {getTable} from "@/app/utils/clientRequests";
+import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
+import {TableData, RentPayments} from "@/types/interfaces";
+import {IconEdit, IconTrash} from "@tabler/icons-react";
+import Link from "next/link";
+import {dateRange, documentFilterFn, leasedFilterFn, range, rangeSlider} from "@/app/utils/filterFunctions";
+import {oblastList} from "@/constants/filterSelectProps";
+import {columnBlue} from "@/constants/commonColumnProps";
+import dayjs from "dayjs";
+import "dayjs/locale/ru";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import TickIcon from "@/app/components/TickIcon";
+import CrossIcon from "@/app/components/CrossIcon";
+import PieChart from "@/app/components/PieChart";
+import {useDisclosure} from "@mantine/hooks";
+import localization from "@/constants/tableLocalization";
+import {notifyError} from "@/app/utils/notifications";
+import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
+import ExclamationIcon from "@/app/components/ExclamationIcon";
+import {EditDateRange, EditTextArea} from "./CustomEditComponents";
+import dateToLocalFormat from "../utils/dateToLocalFormat";
+import {calculatePaidRentValue, calculateNotPaidRentValue} from "@/app/utils/tableCalculations";
 
-dayjs.extend(customParseFormat)
+dayjs.extend(customParseFormat);
 
 export default function Table() {
-    const session = useSession()
-    const queryClient = useQueryClient()
+    const session = useSession();
+    const queryClient = useQueryClient();
 
-    const [isMobile, setIsMobile] = useState(false)
+    const [isMobile, setIsMobile] = useState(false);
 
-    const [openedDeleteModal, {open: openDeleteModal, close: closeDeleteModal}] = useDisclosure(false)
-    const [deleteModalData, setDeleteModalData] = useState<TableData | null>(null)
+    const [openedDeleteModal, {open: openDeleteModal, close: closeDeleteModal}] = useDisclosure(false);
+    const [deleteModalData, setDeleteModalData] = useState<TableData | null>(null);
 
-    const [openedRentModal, {open: openRentModal, close: closeRentModal}] = useDisclosure(false)
-    const [rentModalData, setRentModalData] = useState<any>(null)
+    const [openedRentModal, {open: openRentModal, close: closeRentModal}] = useDisclosure(false);
+    const [rentModalData, setRentModalData] = useState<any>(null);
 
-    const [rentAdvanceInput, setRentAdvanceInput] = useState<number>(0)
-    const [rentPeriodInput, setRentPeriodInput] = useState<number>(0)
-    const [rentPriceInput, setRentPriceInput] = useState<number>(0)
+    const [rentAdvanceInput, setRentAdvanceInput] = useState<number>(0);
+    const [rentPeriodInput, setRentPeriodInput] = useState<number>(0);
+    const [rentPriceInput, setRentPriceInput] = useState<number>(0);
 
-    const [rentPayments, setRentPayments] = useState<(RentPayments[])>([])
-    const [editedRentPayments, setEditedRentPayments] = useState<(RentPayments[])>([])
-    const [editedRowIndex, setEditedRowIndex] = useState(-1)
-    const [rentPaymentsActivePage, setRentPaymentActivePage] = useState(1)
+    const [rentPayments, setRentPayments] = useState<(RentPayments[])>([]);
+    const [editedRentPayments, setEditedRentPayments] = useState<(RentPayments[])>([]);
+    const [editedRowIndex, setEditedRowIndex] = useState(-1);
+    const [rentPaymentsActivePage, setRentPaymentActivePage] = useState(1);
 
-    const [editingRow, setEditingRow] = useState()
-    const [columnFilters, setColumnFilters] = useState([])
-    const [filteredData, setFilteredData] = useState([])
+    const [editingRow, setEditingRow] = useState();
+    const [columnFilters, setColumnFilters] = useState([]);
+    const [filteredData, setFilteredData] = useState([]);
     const [slidersRange, setSlidersRange] = useState({
         area: {min: 0, max: 100},
         ngo: {min: 0, max: 250000},
         expenses: {min: 0, max: 10000}
-    })
+    });
 
     const {
         data: fetchedData = [],
         isError: isLoadingDataError,
         isFetching: isFetchingData,
         isLoading: isLoadingData,
-    } = useGetData()
+    } = useGetData();
 
-    const {mutateAsync: createTableData, isLoading: isCreatingTableData} = useCreateTableData()
-    const {mutateAsync: updateTableData, isLoading: isUpdatingTableData} = useUpdateTableData()
-    const {mutateAsync: deleteTableData, isLoading: isDeletingTableData} = useDeleteTableData()
+    const {mutateAsync: createTableData, isLoading: isCreatingTableData} = useCreateTableData();
+    const {mutateAsync: updateTableData, isLoading: isUpdatingTableData} = useUpdateTableData();
+    const {mutateAsync: deleteTableData, isLoading: isDeletingTableData} = useDeleteTableData();
 
     useEffect(() => {
         const handleResize = () => {
-            setIsMobile(window.innerWidth <= 768)
-        }
+            setIsMobile(window.innerWidth <= 768);
+        };
 
-        handleResize()
-        window.addEventListener('resize', handleResize)
+        handleResize();
+        window.addEventListener("resize", handleResize);
 
         return () => {
-            window.removeEventListener('resize', handleResize)
-        }
-    }, [])
+            window.removeEventListener("resize", handleResize);
+        };
+    }, []);
 
     useEffect(() => {
         if (fetchedData.length > 0) {
             // @ts-ignore
-            setFilteredData(table.getFilteredRowModel().rows)
+            setFilteredData(table.getFilteredRowModel().rows);
 
             setSlidersRange({
                 area: {
@@ -106,14 +118,14 @@ export default function Table() {
                     min: Math.min(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 0,
                     max: Math.max(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 10000,
                 }
-            })
+            });
         }
-    }, [fetchedData])
+    }, [fetchedData]);
 
     // Set filteredData and slidersRange on columnFilters change
     useEffect(() => {
         // @ts-ignore
-        setFilteredData(table.getFilteredRowModel().rows)
+        setFilteredData(table.getFilteredRowModel().rows);
 
         if (fetchedData.length > 0) {
             setSlidersRange({
@@ -129,90 +141,81 @@ export default function Table() {
                     min: Math.min(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 0,
                     max: Math.max(...fetchedData.map((e: any) => parseFloat(e.expenses) || 0)) || 10000,
                 }
-            })
+            });
         }
-    }, [columnFilters])
+    }, [columnFilters]);
 
     // Total NGO footer
     const totalNGO = useMemo(() => {
         return filteredData.reduce((a, b: any) => {
-            return !isNaN(parseFloat(b.original.ngo)) ? a + parseFloat(b.original.ngo) : a
-        }, 0)
-    }, [filteredData])
+            return !isNaN(parseFloat(b.original.ngo)) ? a + parseFloat(b.original.ngo) : a;
+        }, 0);
+    }, [filteredData]);
 
     // Total Area footer
     const totalArea = useMemo(() => {
         return filteredData.reduce((a, b: any) => {
-            return !isNaN(parseFloat(b.original.area)) ? a + parseFloat(b.original.area) : a
-        }, 0)
-    }, [filteredData])
+            return !isNaN(parseFloat(b.original.area)) ? a + parseFloat(b.original.area) : a;
+        }, 0);
+    }, [filteredData]);
 
-    // Total Rent footer
-    const totalRent = useMemo(() => {
+    // Total Paid Rent footer
+    const totalPaidRent = useMemo(() => {
         return filteredData.reduce((a, b: any) => {
-            return !isNaN(parseFloat(b._valuesCache.rent)) ? a + parseFloat(b._valuesCache.rent) : a
-        }, 0)
-    }, [filteredData])
+            return !isNaN(parseFloat(b._valuesCache.rent)) ? a + parseFloat(b._valuesCache.rent) : a;
+        }, 0);
+    }, [filteredData]);
+
+    // Total Not Paid Rent footer
+    const totalNotPaidRent = useMemo(() => {
+        let total = 0;
+
+        if (filteredData) {
+            filteredData.forEach((row: any) => (total += Number(calculateNotPaidRentValue(row.original))));
+        }
+
+        return total || 0;
+    }, [filteredData]);
 
     // Leased chart pie stats
     const leasedStats = useMemo(
         () => {
             //@ts-ignore
-            const leased = filteredData.filter(item => item.original.contract_lease).length
-            const notLeased = filteredData.length - leased
-            const totalCount = filteredData.length
+            const leased = filteredData.filter(item => item.original.contract_lease).length;
+            const notLeased = filteredData.length - leased;
+            const totalCount = filteredData.length;
 
-            const leasedPercentage = Number(((leased / totalCount) * 100).toFixed(2))
-            const notLeasedPercentage = Number(((notLeased / totalCount) * 100).toFixed(2))
+            const leasedPercentage = Number(((leased / totalCount) * 100).toFixed(2));
+            const notLeasedPercentage = Number(((notLeased / totalCount) * 100).toFixed(2));
 
-            return [leasedPercentage, notLeasedPercentage]
+            return [leasedPercentage, notLeasedPercentage];
         }, [filteredData]
-    )
+    );
 
     // Initial Rent Payments (from DB)
     useEffect(() => {
         if (openedRentModal && rentModalData && fetchedData) {
-            const row: any = {...fetchedData.find((data) => data.id === rentModalData?.id)}
+            const row: any = {...fetchedData.find((data) => data.id === rentModalData?.id)};
 
-            setRentAdvanceInput(!isNaN(parseFloat(row.rent_advance)) ? row.rent_advance : 0)
-            setRentPeriodInput(!isNaN(parseFloat(row.rent_period)) ? row.rent_period : 0)
-            setRentPriceInput(!isNaN(parseFloat(row.rent_price)) ? row.rent_price : 0)
-            setRentPayments(row.rent_payments || [])
-            setRentPaymentActivePage(1)
-            setEditedRowIndex(-1)
+            setRentAdvanceInput(!isNaN(parseFloat(row.rent_advance)) ? row.rent_advance : 0);
+            setRentPeriodInput(!isNaN(parseFloat(row.rent_period)) ? row.rent_period : 0);
+            setRentPriceInput(!isNaN(parseFloat(row.rent_price)) ? row.rent_price : 0);
+            setRentPayments(row.rent_payments || []);
+            setRentPaymentActivePage(1);
+            setEditedRowIndex(-1);
         }
-    }, [openedRentModal])
+    }, [openedRentModal]);
 
-    const dateToLocalFormat = (date: any) => {
-        if (!date) return ""
-
-        return date.toLocaleDateString("ru-RU", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric",
-        })
-    }
-
-    const calculateRentValue = (row: any) => {
-        if (!row.rent_payments) {
-            return null
-        }
-
-        return row.rent_payments
-            .filter((payment: any) => payment && !isNaN(payment.rentPrice) && !payment.rentIsPaid)
-            .reduce((total: any, payment: any) => total + Number(payment.rentPrice), 0)
-            .toFixed(2)
-    }
 
     const getUpdatedRentPayments = () => {
         return rentPayments.map((payment) => {
             const editedPayment = editedRentPayments.find(
                 (editedPayment) => editedPayment.rentYear === payment.rentYear
-            )
+            );
 
-            return editedPayment ? editedPayment : payment
-        })
-    }
+            return editedPayment ? editedPayment : payment;
+        });
+    };
 
     const rentIsPaidIcon = (
         rentIsPaid: boolean | undefined,
@@ -230,17 +233,17 @@ export default function Table() {
                 height={32}
                 onClick={() => handleEditRentStatus(rentRow)}
             />
-        )
-    }
+        );
+    };
 
     const isDebtor = (row: any) => {
-        const rentPayments = row.rent_payments
+        const rentPayments = row.rent_payments;
         const isDebt = (rentPayments: RentPayments[]) => {
             return rentPayments.some((payment) => {
-                const nextYearDate = dayjs(`${payment.rentYear + 1}-01-01`)
-                return payment.rentPrice > 0 && !payment.rentIsPaid && dayjs().isAfter(nextYearDate)
-            })
-        }
+                const nextYearDate = dayjs(`${payment.rentYear + 1}-01-01`);
+                return payment.rentPrice > 0 && !payment.rentIsPaid && dayjs().isAfter(nextYearDate);
+            });
+        };
 
         return (
             <div className="flex items-center justify-center">
@@ -248,120 +251,8 @@ export default function Table() {
                 {rentPayments && isDebt(rentPayments) &&
                     <ExclamationIcon width={16} height={16} style={{position: "absolute", marginLeft: "-48px"}}/>}
             </div>
-        )
-    }
-
-    function useEditDate(props: any) {
-        const {
-            cell,
-            column,
-            row,
-            table
-        } = props
-        const {
-            getState,
-            setEditingCell,
-            setEditingRow,
-            setCreatingRow
-        } = table
-        const {
-            editingRow,
-            creatingRow
-        } = getState()
-
-        const isCreating = creatingRow?.id === row.id
-        const isEditing = editingRow?.id === row.id
-
-        const initialValue = isValidDate(cell.getValue()) ? dayjs(cell.getValue(), "DD.MM.YYYY").toDate() : cell.getValue()
-
-        const [value, setValue] = useState(() => initialValue || null)
-
-        const handleOnChange = (newValue: any) => {
-            row._valuesCache[column.id] = dateToLocalFormat(newValue)
-
-            if (isCreating) {
-                setCreatingRow(row)
-            } else if (isEditing) {
-                setEditingRow(row)
-            }
-
-            setValue(newValue)
-        }
-
-        const handleBlur = () => {
-            setEditingCell(null)
-        }
-
-        return {value, handleOnChange, handleBlur}
-    }
-
-
-    function useEdit(props: any) {
-        const {
-            cell,
-            column,
-            row,
-            table
-        } = props
-        const {
-            getState,
-            setEditingCell,
-            setEditingRow,
-            setCreatingRow
-        } = table
-        const {
-            editingRow,
-            creatingRow
-        } = getState()
-
-        const [value, setValue] = useState(() => cell.getValue())
-        const isCreating = creatingRow?.id === row.id
-        const isEditing = editingRow?.id === row.id
-
-        const handleOnChange = (newValue: any) => {
-            //@ts-ignore
-            row._valuesCache[column.id] = newValue
-            if (isCreating) setCreatingRow(row)
-            else if (isEditing) setEditingRow(row)
-            setValue(newValue)
-        }
-
-        const handleBlur = () => {
-            setEditingCell(null)
-        }
-
-        return {value, handleOnChange, handleBlur}
-    }
-
-    function EditTextArea(props: any) {
-        const {value, handleOnChange, handleBlur} = useEdit(props)
-
-        return (
-            <Textarea
-                placeholder={props.column.columnDef.header}
-                value={value || ""}
-                onBlur={handleBlur}
-                onChange={(e) => handleOnChange(e.currentTarget.value)}
-            />
-        )
-    }
-
-    function EditDateRange(props: any) {
-        const {value, handleOnChange, handleBlur} = useEditDate(props)
-
-        return (
-            <DatePickerInput
-                dropdownType="modal"
-                placeholder={props.column.columnDef.header}
-                locale="ru"
-                valueFormat="DD.MM.YYYY"
-                value={value}
-                onBlur={handleBlur}
-                onChange={(newValue) => handleOnChange(newValue)}
-                clearable
-            />
-        )
-    }
+        );
+    };
 
     const columns = useMemo<MRT_ColumnDef<TableData>[]>(() => [
             {
@@ -395,7 +286,7 @@ export default function Table() {
                     data: [...new Set(fetchedData.map((e) => e.region ? e.region : null))]
                 },
                 Edit: (props) => {
-                    return <EditTextArea {...props} />
+                    return <EditTextArea {...props} />;
                 },
             },
             {
@@ -482,7 +373,7 @@ export default function Table() {
                     valueFormat: "DD.MM.YYYY",
                 },
                 Edit: (props) => {
-                    return <EditDateRange {...props} />
+                    return <EditDateRange {...props} />;
                 },
                 size: 350,
             },
@@ -503,7 +394,7 @@ export default function Table() {
                     valueFormat: "DD.MM.YYYY"
                 },
                 Edit: (props) => {
-                    return <EditDateRange {...props} />
+                    return <EditDateRange {...props} />;
                 },
                 size: 350,
             },
@@ -536,10 +427,10 @@ export default function Table() {
                             value={cell.getValue()}
                             maxRows={2}
                         />
-                    ) : ""
+                    ) : "";
                 },
                 Edit: (props) => {
-                    return <EditTextArea {...props} />
+                    return <EditTextArea {...props} />;
                 },
                 size: 400,
             },
@@ -571,7 +462,7 @@ export default function Table() {
                     valueFormat: "DD.MM.YYYY",
                 },
                 Edit: (props) => {
-                    return <EditDateRange {...props} />
+                    return <EditDateRange {...props} />;
                 },
                 size: 350,
                 ...columnBlue
@@ -585,13 +476,13 @@ export default function Table() {
                 header: "Орендна плата",
                 accessorKey: "rent",
                 accessorFn: (row: any) => row.rent_payments ?
-                    calculateRentValue(row) : null,
+                    calculatePaidRentValue(row) : null,
                 enableEditing: false,
                 filterVariant: "range",
                 filterFn: "range",
                 Cell: ({cell, row}: any) => (
                     <div
-                        className={`clickable-cell ${cell.getValue() === null ? 'empty-cell' : ''}`}
+                        className={`clickable-cell ${cell.getValue() === null ? "empty-cell" : ""}`}
                         onClick={() => {
                             const {
                                 id,
@@ -600,17 +491,17 @@ export default function Table() {
                                 rent_advance,
                                 contract_lease_date,
                                 rent_payments
-                            } = row.original
+                            } = row.original;
 
                             if (rent_period || rent_price || rent_advance || contract_lease_date || rent_payments) {
                                 setRentModalData({
                                     id,
                                     contractLeaseDate: contract_lease_date,
-                                })
+                                });
 
-                                openRentModal()
+                                openRentModal();
                             } else {
-                                notifyError("Спочатку необхідно вказати дату договору оренди")
+                                notifyError("Спочатку необхідно вказати дату договору оренди");
                             }
                         }}
                     >
@@ -621,7 +512,18 @@ export default function Table() {
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
                         Загальна орендна плата
-                        <Box>{totalRent.toFixed(2)} ₴</Box>
+                        <Box>
+                            <span>
+                                <Tooltip label="Сплачена" className="text-green-600">
+                                    <Text style={{display: "inline"}}>{totalPaidRent.toFixed(2)} </Text>
+                                </Tooltip>
+                                /
+                                <Tooltip label="Очікується" className="text-red-500">
+                                    <Text style={{display: "inline"}}> {totalNotPaidRent.toFixed(2)} </Text>
+                                </Tooltip>
+                                ₴
+                            </span>
+                        </Box>
                     </Stack>
                 ),
                 ...columnBlue
@@ -662,16 +564,16 @@ export default function Table() {
                             value={cell.getValue()}
                             maxRows={2}
                         />
-                    ) : ""
+                    ) : "";
                 },
                 Edit: (props) => {
-                    return <EditTextArea {...props} />
+                    return <EditTextArea {...props} />;
                 },
                 size: 400,
                 ...columnBlue
             },
         ], [fetchedData, filteredData, rentPayments]
-    )
+    );
 
     const handleCreateTableData = async ({values, table}: any) => {
         const res = await toast.promise(
@@ -681,10 +583,10 @@ export default function Table() {
                 success: <b>Інформація успішно додана!</b>,
                 error: <b>Виникла помилка.</b>,
             }
-        )
+        );
 
-        if (res.ok) table.setCreatingRow(null)
-    }
+        if (res.ok) table.setCreatingRow(null);
+    };
 
     const handleSaveTableData = async ({values, table}: any) => {
         const res = await toast.promise(
@@ -694,23 +596,23 @@ export default function Table() {
                 success: <b>Інформація успішно збережена!</b>,
                 error: <b>Виникла помилка.</b>,
             }
-        )
+        );
 
-        if (res.ok) table.setEditingRow(null)
-    }
+        if (res.ok) table.setEditingRow(null);
+    };
 
     const openDeleteConfirmModal = async (row: MRT_Row<TableData>) => {
-        const data: TableData = row.original
-        setDeleteModalData(data)
-        openDeleteModal()
-    }
+        const data: TableData = row.original;
+        setDeleteModalData(data);
+        openDeleteModal();
+    };
 
     useEffect(() => {
         if (rentModalData) {
-            updateRentPayments()
+            updateRentPayments();
         }
 
-    }, [rentAdvanceInput, rentPeriodInput, rentPriceInput])
+    }, [rentAdvanceInput, rentPeriodInput, rentPriceInput]);
 
     const updateRentPayments = () => {
         if (rentPayments.length < 1) {
@@ -720,9 +622,9 @@ export default function Table() {
                 rentPrice: rentPriceInput,
                 contractLeaseDate: rentModalData.contractLeaseDate,
                 rentPayments: rentPayments,
-            })
+            });
 
-            setRentPayments(calculatedRentPayments)
+            setRentPayments(calculatedRentPayments);
         } else {
 
             const calculatedRentPayments = calculateRentPayments({
@@ -731,56 +633,56 @@ export default function Table() {
                 rentPrice: rentPriceInput,
                 contractLeaseDate: rentModalData.contractLeaseDate,
                 rentPayments: rentPayments,
-            })
+            });
 
-            setRentPayments(calculatedRentPayments)
+            setRentPayments(calculatedRentPayments);
         }
 
-    }
+    };
 
     const handleRentInputsChange = (e: any) => {
         if (e.target.name === "rentAdvance") {
-            setRentAdvanceInput(parseFloat(e.target.value))
+            setRentAdvanceInput(parseFloat(e.target.value));
         } else if (e.target.name === "rentPeriod") {
-            setRentPeriodInput(parseInt(e.target.value, 10))
+            setRentPeriodInput(parseInt(e.target.value, 10));
         } else if (e.target.name === "rentPrice") {
-            setRentPriceInput(parseFloat(e.target.value))
+            setRentPriceInput(parseFloat(e.target.value));
         }
-    }
+    };
 
     const handleEditRentPrice = (rentPaymentsRow: RentPayments, newValue: string) => {
-        const updatedRentPayments: RentPayments[] = [...editedRentPayments]
+        const updatedRentPayments: RentPayments[] = [...editedRentPayments];
 
-        const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear)
+        const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear);
 
         if (rowIndex !== -1) {
-            updatedRentPayments[rowIndex].rentPrice = Number(newValue)
+            updatedRentPayments[rowIndex].rentPrice = Number(newValue);
         } else {
             updatedRentPayments.push({
                 ...rentPaymentsRow,
                 rentPrice: Number(newValue),
-            })
+            });
         }
 
-        setEditedRentPayments(updatedRentPayments)
-    }
+        setEditedRentPayments(updatedRentPayments);
+    };
 
     const handleEditRentStatus = (rentPaymentsRow: RentPayments) => {
-        const updatedRentPayments: RentPayments[] = [...editedRentPayments]
+        const updatedRentPayments: RentPayments[] = [...editedRentPayments];
 
-        const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear)
+        const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear);
 
         if (rowIndex !== -1) {
-            updatedRentPayments[rowIndex].rentIsPaid = !updatedRentPayments[rowIndex].rentIsPaid
+            updatedRentPayments[rowIndex].rentIsPaid = !updatedRentPayments[rowIndex].rentIsPaid;
         } else {
             updatedRentPayments.push({
                 ...rentPaymentsRow,
                 rentIsPaid: !rentPaymentsRow.rentIsPaid,
-            })
+            });
         }
 
-        setEditedRentPayments(updatedRentPayments)
-    }
+        setEditedRentPayments(updatedRentPayments);
+    };
 
 
     const table = useMantineReactTable({
@@ -813,10 +715,10 @@ export default function Table() {
         mantineTableBodyRowProps: ({table, row}) => ({
             onDoubleClick: async () => {
                 if (!editingRow) {
-                    const originalRow = {...row.original, id: null, isLeased: null}
-                    const changedRow = {...row._valuesCache, id: null, isLeased: null}
+                    const originalRow = {...row.original, id: null, isLeased: null};
+                    const changedRow = {...row._valuesCache, id: null, isLeased: null};
 
-                    table.setEditingRow(row)
+                    table.setEditingRow(row);
                 }
             },
         }),
@@ -837,7 +739,7 @@ export default function Table() {
             },
         },
         renderRowActions: ({row, table}) => (
-            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', alignItems: 'center'}}>
+            <div style={{display: "grid", gridTemplateColumns: "1fr 1fr", alignItems: "center"}}>
                 <Tooltip label="Відредагувати">
                     <ActionIcon onClick={() => table.setEditingRow(row)}>
                         <IconEdit/>
@@ -876,7 +778,7 @@ export default function Table() {
                     onClick={() => {
                         table.setCreatingRow(
                             createRow(table, {})
-                        )
+                        );
                     }}
                 >
                     <span className="relative text-center">Додати інформацію</span>
@@ -900,71 +802,71 @@ export default function Table() {
                 )}
             </div>
         ),
-    })
+    });
 
     function useGetData() {
         return useQuery<TableData[]>({
             queryKey: ["table"],
             queryFn: async () => {
-                return await getTable()
+                return await getTable();
             },
             keepPreviousData: true,
             refetchInterval: 30000,
-        })
+        });
     }
 
     function useCreateTableData() {
         return useMutation({
             mutationFn: async (tableData: TableData) => {
                 // @ts-ignore
-                const id = tableData.id.props ? tableData.id.props.children[0].props.children : tableData.id
+                const id = tableData.id.props ? tableData.id.props.children[0].props.children : tableData.id;
 
                 const formattedTableData = {
                     ...tableData,
                     id: id,
-                }
+                };
 
-                delete formattedTableData.isLeased
-                delete formattedTableData.rent
+                delete formattedTableData.isLeased;
+                delete formattedTableData.rent;
 
                 const res = await fetch("/api/table", {
                     body: JSON.stringify(formattedTableData),
                     method: "POST"
-                })
+                });
 
-                if (!res.ok) return Promise.reject(res)
+                if (!res.ok) return Promise.reject(res);
 
-                return Promise.resolve(res)
+                return Promise.resolve(res);
             },
             onSettled: () => queryClient.invalidateQueries({queryKey: ["table"]}),
-        })
+        });
     }
 
     function useUpdateTableData() {
         return useMutation({
             mutationFn: async (tableData: TableData) => {
                 // @ts-ignore
-                const id = tableData.id.props ? tableData.id.props.children[0].props.children : tableData.id
+                const id = tableData.id.props ? tableData.id.props.children[0].props.children : tableData.id;
 
                 const formattedTableData = {
                     ...tableData,
                     id,
-                }
+                };
 
-                delete formattedTableData.isLeased
-                delete formattedTableData.rent
+                delete formattedTableData.isLeased;
+                delete formattedTableData.rent;
 
                 const res = await fetch("/api/table", {
                     body: JSON.stringify(formattedTableData),
                     method: "PUT"
-                })
+                });
 
-                if (!res.ok) return Promise.reject(res)
+                if (!res.ok) return Promise.reject(res);
 
-                return Promise.resolve(res)
+                return Promise.resolve(res);
             },
             onSettled: () => queryClient.invalidateQueries({queryKey: ["table"]}),
-        })
+        });
     }
 
     function useDeleteTableData() {
@@ -973,16 +875,16 @@ export default function Table() {
                 const res = await fetch("/api/table", {
                     body: JSON.stringify({id: rowId}),
                     method: "DELETE"
-                })
+                });
 
-                if (!res.ok) return Promise.reject(res)
+                if (!res.ok) return Promise.reject(res);
 
-                return Promise.resolve(res)
+                return Promise.resolve(res);
             },
             onSettled: () => {
-                queryClient.invalidateQueries(["table"])
+                queryClient.invalidateQueries(["table"]);
             },
-        })
+        });
     }
 
     return (
@@ -996,8 +898,8 @@ export default function Table() {
             <Modal
                 opened={openedDeleteModal}
                 onClose={() => {
-                    setDeleteModalData(null)
-                    closeDeleteModal()
+                    setDeleteModalData(null);
+                    closeDeleteModal();
                 }}
                 title={
                     <div className="flex flex-row items-center justify-center">
@@ -1024,13 +926,13 @@ export default function Table() {
                         type="button"
                         className="inline-flex w-full justify-center rounded-md bg-red-600 ml-3 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-500 sm:ml-3 sm:w-auto"
                         onClick={async () => {
-                            closeDeleteModal()
+                            closeDeleteModal();
                             await toast.promise(deleteTableData(Number(deleteModalData?.id)), {
                                 loading: <b>Видаяється...</b>,
                                 success: <b>Інформацію успішно видалено!</b>,
                                 error: <b>Виникла помилка.</b>,
-                            })
-                            setDeleteModalData(null)
+                            });
+                            setDeleteModalData(null);
                         }}
                     >
                         Видалити
@@ -1047,13 +949,13 @@ export default function Table() {
             <Modal
                 opened={openedRentModal}
                 onClose={() => {
-                    setRentModalData(null)
-                    setRentAdvanceInput(0)
-                    setRentPeriodInput(0)
-                    setRentPriceInput(0)
-                    setRentPayments([])
-                    setEditedRentPayments([])
-                    closeRentModal()
+                    setRentModalData(null);
+                    setRentAdvanceInput(0);
+                    setRentPeriodInput(0);
+                    setRentPriceInput(0);
+                    setRentPayments([]);
+                    setEditedRentPayments([]);
+                    closeRentModal();
                 }}
                 title={<p className="text-xl font-bold">Деталі орендної плати</p>}
                 size="sm"
@@ -1115,7 +1017,7 @@ export default function Table() {
                                                     className="border border-slate-300 p-4 text-center w-20"
                                                     style={{height: "69px"}}
                                                     onClick={() => {
-                                                        setEditedRowIndex(i)
+                                                        setEditedRowIndex(i);
                                                     }}
                                                     onBlur={() => setEditedRowIndex(-1)}
                                                 >
@@ -1175,22 +1077,22 @@ export default function Table() {
                             className="mt-6 w-full px-6 py-2 font-semibold rounded bg-green-500 hover:bg-gradient-to-r hover:from-green-500 hover:to-green-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-green-400 transition-all ease-out duration-300"
                             style={{whiteSpace: "nowrap"}}
                             onClick={async () => {
-                                const updatedRentPayments = getUpdatedRentPayments()
+                                const updatedRentPayments = getUpdatedRentPayments();
                                 const updatedRentDetails = {
                                     id: rentModalData?.id,
                                     rent_advance: Number(rentAdvanceInput),
                                     rent_period: Number(rentPeriodInput),
                                     rent_price: Number(rentPriceInput),
                                     rent_payments: updatedRentPayments || null,
-                                }
+                                };
                                 const res = await toast.promise(updateTableData(updatedRentDetails), {
                                     loading: <b>Зберігається...</b>,
                                     success: <b>Інформація успішно збережена!</b>,
                                     error: <b>Виникла помилка.</b>,
-                                })
+                                });
                                 if (res.ok) {
-                                    setEditedRentPayments([])
-                                    setRentPayments(updatedRentPayments)
+                                    setEditedRentPayments([]);
+                                    setRentPayments(updatedRentPayments);
                                 }
                             }}
                         >
@@ -1201,5 +1103,5 @@ export default function Table() {
             </Modal>
             <MantineReactTable table={table}/>
         </MantineProvider>
-    )
+    );
 }

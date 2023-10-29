@@ -22,27 +22,28 @@ model User {
 }
 
 model Table {
-  id                  Int       @id @default(autoincrement())
-  oblast              String?
-  region              String?
-  cadastral           String?
-  composition         String?
-  area                String?
-  ngo                 String?
-  owner               String?
-  contract_sale       String?
-  contract_sale_date  DateTime?
-  extract_land        String?
-  extract_land_date   DateTime?
-  expenses            String?
-  document_land       String?
-  tenant              String?
-  rent_price          Float?
-  rent_period         Int?
-  rent_advance        Float?
-  rent_payments       Json?
-  contract_lease      String?
-  contract_lease_date DateTime?
-  extract_lease       String?
-  document_land_lease String?
+  id                     Int       @id @default(autoincrement())
+  oblast                 String?
+  region                 String?
+  cadastral              String?
+  composition            String?
+  area                   String?
+  ngo                    String?
+  owner                  String?
+  contract_sale          String?
+  contract_sale_date     DateTime?
+  extract_land           String?
+  extract_land_date      DateTime?
+  expenses               String?
+  document_land          String?
+  tenant                 String?
+  rent_price             Float?
+  rent_period            Int?
+  rent_advance           Float?
+  rent_payments_per_year Int?
+  rent_payments          Json?
+  contract_lease         String?
+  contract_lease_date    DateTime?
+  extract_lease          String?
+  document_land_lease    String?
 }

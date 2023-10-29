@@ -18,6 +18,7 @@ export interface TableData {
     "rent_price"?: number
     "rent_period"?: any
     "rent_advance"?: number
+    "rent_payments_per_year"?: number
     "rent_payments"?: RentPayments[] | null,
     "contract_lease"?: string
     "contract_lease_date"?: string
