@@ -1,7 +1,7 @@
 "use client"
 
 import Button from "@/app/components/Button"
-import React, {ChangeEvent, useState} from "react"
+import React, {useState} from "react"
 import {signIn} from "next-auth/react"
 import Input from "@/app/components/Input"
 import {notifyError} from "@/app/utils/notifications"

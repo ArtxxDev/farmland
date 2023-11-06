@@ -3,27 +3,22 @@
 import React, {useEffect, useMemo, useState} from "react";
 import {useSession} from "next-auth/react";
 import toast from "react-hot-toast";
-import {
-    MantineReactTable,
-    type MRT_ColumnDef, MRT_Row,
-    useMantineReactTable,
-    createRow
-} from "mantine-react-table";
+import {createRow, MantineReactTable, type MRT_ColumnDef, MRT_Row, useMantineReactTable} from "mantine-react-table";
 import {
     ActionIcon,
     Box,
     Input,
     MantineProvider,
-    Modal,
-    Stack,
-    Tooltip,
+    Modal, NumberInput,
     Pagination,
+    Stack,
+    Text,
     Textarea,
-    Text
+    Tooltip
 } from "@mantine/core";
 import {getTable} from "@/app/utils/clientRequests";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {TableData, RentPayments} from "@/types/interfaces";
+import {RentPayments, TableData} from "@/types/interfaces";
 import {IconEdit, IconTrash} from "@tabler/icons-react";
 import Link from "next/link";
 import {dateRange, documentFilterFn, leasedFilterFn, range, rangeSlider} from "@/app/utils/filterFunctions";
@@ -38,11 +33,11 @@ import PieChart from "@/app/components/PieChart";
 import {useDisclosure} from "@mantine/hooks";
 import localization from "@/constants/tableLocalization";
 import {notifyError} from "@/app/utils/notifications";
-import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
 import ExclamationIcon from "@/app/components/ExclamationIcon";
 import {EditDateRange, EditTextArea} from "./CustomEditComponents";
 import dateToLocalFormat from "../utils/dateToLocalFormat";
-import {calculatePaidRentValue, calculateNotPaidRentValue} from "@/app/utils/tableCalculations";
+import {calculateRentValuePaid, calculateRentValueNotPaid} from "@/app/utils/tableCalculations";
+import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
 
 dayjs.extend(customParseFormat);
 
@@ -61,11 +56,12 @@ export default function Table() {
     const [rentAdvanceInput, setRentAdvanceInput] = useState<number>(0);
     const [rentPeriodInput, setRentPeriodInput] = useState<number>(0);
     const [rentPriceInput, setRentPriceInput] = useState<number>(0);
+    const [rentPaymentsPerYearInput, setRentPaymentsPerYearInput] = useState<number>(1);
 
     const [rentPayments, setRentPayments] = useState<(RentPayments[])>([]);
-    const [editedRentPayments, setEditedRentPayments] = useState<(RentPayments[])>([]);
-    const [editedRowIndex, setEditedRowIndex] = useState(-1);
+    const [editedRentPayments, setEditedRentPayments] = useState<any>([]);
     const [rentPaymentsActivePage, setRentPaymentActivePage] = useState(1);
+    const [rentPaymentsTotalPages, setRentPaymentsTotalPages] = useState<number>(1);
 
     const [editingRow, setEditingRow] = useState();
     const [columnFilters, setColumnFilters] = useState([]);
@@ -160,18 +156,22 @@ export default function Table() {
     }, [filteredData]);
 
     // Total Paid Rent footer
-    const totalPaidRent = useMemo(() => {
-        return filteredData.reduce((a, b: any) => {
-            return !isNaN(parseFloat(b._valuesCache.rent)) ? a + parseFloat(b._valuesCache.rent) : a;
-        }, 0);
-    }, [filteredData]);
-
-    // Total Not Paid Rent footer
-    const totalNotPaidRent = useMemo(() => {
+    const totalRentValueNotPaid = useMemo(() => {
         let total = 0;
 
         if (filteredData) {
-            filteredData.forEach((row: any) => (total += Number(calculateNotPaidRentValue(row.original))));
+            filteredData.forEach((row: any) => (total += Number(calculateRentValueNotPaid(row.original))));
+        }
+
+        return total || 0;
+    }, [filteredData]);
+
+    // Total Not Paid Rent footer
+    const totalRentValuePaid = useMemo(() => {
+        let total = 0;
+
+        if (filteredData) {
+            filteredData.forEach((row: any) => (total += Number(calculateRentValuePaid(row.original))));
         }
 
         return total || 0;
@@ -180,6 +180,9 @@ export default function Table() {
     // Leased chart pie stats
     const leasedStats = useMemo(
         () => {
+            if (filteredData.length < 1) {
+                return [0, 0]
+            }
             //@ts-ignore
             const leased = filteredData.filter(item => item.original.contract_lease).length;
             const notLeased = filteredData.length - leased;
@@ -196,42 +199,41 @@ export default function Table() {
     useEffect(() => {
         if (openedRentModal && rentModalData && fetchedData) {
             const row: any = {...fetchedData.find((data) => data.id === rentModalData?.id)};
+            const totalPages = row.rent_payments ? Math.ceil(row.rent_payments.length / 5) : 1;
 
+            setRentPaymentsTotalPages(totalPages);
             setRentAdvanceInput(!isNaN(parseFloat(row.rent_advance)) ? row.rent_advance : 0);
             setRentPeriodInput(!isNaN(parseFloat(row.rent_period)) ? row.rent_period : 0);
             setRentPriceInput(!isNaN(parseFloat(row.rent_price)) ? row.rent_price : 0);
+            setRentPaymentsPerYearInput(!isNaN(parseFloat(row.rent_payments_per_year)) ? row.rent_payments_per_year : 1)
             setRentPayments(row.rent_payments || []);
+            //@ts-ignore
+            setEditedRentPayments((row.rent_payments || []).map((e: any) => ({
+                ...e,
+                rentValue: String(e.rentValue || "0"),
+                rentValuePaid: String(e.rentValuePaid || "0")
+            })));
             setRentPaymentActivePage(1);
-            setEditedRowIndex(-1);
         }
+
     }, [openedRentModal]);
 
 
-    const getUpdatedRentPayments = () => {
-        return rentPayments.map((payment) => {
-            const editedPayment = editedRentPayments.find(
-                (editedPayment) => editedPayment.rentYear === payment.rentYear
-            );
+    const getUpdatedRentPayments = (editedRentPayments: RentPayments[]) => editedRentPayments
+        .map((e: any) => ({...e, rentValue: Number(e.rentValue), rentValuePaid: Number(e.rentValuePaid)}))
 
-            return editedPayment ? editedPayment : payment;
-        });
-    };
-
-    const rentIsPaidIcon = (
-        rentIsPaid: boolean | undefined,
-        rentRow: RentPayments
-    ) => {
+    const rentIsPaidIcon = (rentIsPaid: boolean | undefined, i: number) => {
         return rentIsPaid ? (
             <TickIcon
                 width={32}
                 height={32}
-                onClick={() => handleEditRentStatus(rentRow)}
+                onClick={() => handleEditRentPayments({rentIsPaid}, i)}
             />
         ) : (
             <CrossIcon
                 width={32}
                 height={32}
-                onClick={() => handleEditRentStatus(rentRow)}
+                onClick={() => handleEditRentPayments({rentIsPaid}, i)}
             />
         );
     };
@@ -241,7 +243,7 @@ export default function Table() {
         const isDebt = (rentPayments: RentPayments[]) => {
             return rentPayments.some((payment) => {
                 const nextYearDate = dayjs(`${payment.rentYear + 1}-01-01`);
-                return payment.rentPrice > 0 && !payment.rentIsPaid && dayjs().isAfter(nextYearDate);
+                return payment.rentValue > 0 && !payment.rentIsPaid && dayjs().isAfter(nextYearDate);
             });
         };
 
@@ -476,7 +478,7 @@ export default function Table() {
                 header: "Орендна плата",
                 accessorKey: "rent",
                 accessorFn: (row: any) => row.rent_payments ?
-                    calculatePaidRentValue(row) : null,
+                    calculateRentValueNotPaid(row) : null,
                 enableEditing: false,
                 filterVariant: "range",
                 filterFn: "range",
@@ -514,12 +516,12 @@ export default function Table() {
                         Загальна орендна плата
                         <Box>
                             <span>
-                                <Tooltip label="Сплачена" className="text-green-600">
-                                    <Text style={{display: "inline"}}>{totalPaidRent.toFixed(2)} </Text>
+                                <Tooltip label="Сплачено" className="text-green-600">
+                                    <Text style={{display: "inline"}}>{totalRentValuePaid.toFixed(2)} </Text>
                                 </Tooltip>
                                 /
                                 <Tooltip label="Очікується" className="text-red-500">
-                                    <Text style={{display: "inline"}}> {totalNotPaidRent.toFixed(2)} </Text>
+                                    <Text style={{display: "inline"}}> {totalRentValueNotPaid.toFixed(2)} </Text>
                                 </Tooltip>
                                 ₴
                             </span>
@@ -607,83 +609,166 @@ export default function Table() {
         openDeleteModal();
     };
 
-    useEffect(() => {
-        if (rentModalData) {
-            updateRentPayments();
+    const initiateRentPayments = () => {
+        const calculatedRentPayments = rentPaymentsInitial({
+            rentAdvance: rentAdvanceInput,
+            rentPeriod: rentPeriodInput,
+            rentPrice: rentPriceInput,
+            rentPaymentsPerYear: rentPaymentsPerYearInput,
+            contractLeaseDate: rentModalData.contractLeaseDate,
+            rentPayments: [], // should we pass rentPayments or editedRentPayments ???
+        });
+
+        setRentPayments(calculatedRentPayments);
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
+            ...e,
+            rentValue: String(e.rentValue || "0"),
+            rentValuePaid: String(e.rentValuePaid || "0")
+        })));
+        setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
+    }
+
+    const initiateButtonDisabled = () => !(rentPeriodInput > 0 && rentPaymentsPerYearInput > 0);
+
+
+    const handleRentAdvanceChange = (oldValue: any, newValue: any) => {
+        if (isNaN(parseFloat(newValue))) {
+            newValue = 0;
         }
 
-    }, [rentAdvanceInput, rentPeriodInput, rentPriceInput]);
+        const action = {initiator: "rentAdvance", oldValue: oldValue, newValue: newValue}
 
-    const updateRentPayments = () => {
-        if (rentPayments.length < 1) {
-            const calculatedRentPayments = rentPaymentsInitial({
-                rentAdvance: rentAdvanceInput,
-                rentPeriod: rentPeriodInput,
-                rentPrice: rentPriceInput,
-                contractLeaseDate: rentModalData.contractLeaseDate,
-                rentPayments: rentPayments,
-            });
+        setRentAdvanceInput(newValue);
 
-            setRentPayments(calculatedRentPayments);
-        } else {
+        if (!rentPayments || rentPayments.length < 1) return;
 
-            const calculatedRentPayments = calculateRentPayments({
-                rentAdvance: rentAdvanceInput,
-                rentPeriod: rentPeriodInput,
-                rentPrice: rentPriceInput,
-                contractLeaseDate: rentModalData.contractLeaseDate,
-                rentPayments: rentPayments,
-            });
+        const calculatedRentPayments = calculateRentPayments({
+            rentAdvance: rentAdvanceInput,
+            rentPeriod: rentPeriodInput,
+            rentPrice: rentPriceInput,
+            rentPaymentsPerYear: rentPaymentsPerYearInput,
+            contractLeaseDate: rentModalData.contractLeaseDate,
+            rentPayments: editedRentPayments
+        }, action);
 
-            setRentPayments(calculatedRentPayments);
+        setRentPayments(calculatedRentPayments);
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
+            ...e,
+            rentValue: String(e.rentValue || "0"),
+            rentValuePaid: String(e.rentValuePaid || "0")
+        })));
+        setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
+    }
+
+
+    const handleRentPeriodChange = (oldValue: any, newValue: any) => {
+        if (isNaN(parseFloat(newValue))) {
+            newValue = oldValue;
         }
 
+        const action = {initiator: "rentPeriod", oldValue: oldValue, newValue: newValue}
+
+        setRentPeriodInput(newValue);
+
+        if (!rentPayments || rentPayments.length < 1) return;
+
+        const calculatedRentPayments = calculateRentPayments({
+            rentAdvance: rentAdvanceInput,
+            rentPeriod: rentPeriodInput,
+            rentPrice: rentPriceInput,
+            rentPaymentsPerYear: rentPaymentsPerYearInput,
+            contractLeaseDate: rentModalData.contractLeaseDate,
+            rentPayments: editedRentPayments
+        }, action);
+
+        setRentPayments(calculatedRentPayments);
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
+            ...e,
+            rentValue: String(e.rentValue || "0"),
+            rentValuePaid: String(e.rentValuePaid || "0")
+        })));
+        setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
+    }
+
+    const handleRentPriceChange = (oldValue: any, newValue: any) => {
+        if (isNaN(parseFloat(newValue))) {
+            newValue = oldValue;
+        }
+
+        const action = {initiator: "rentPrice", oldValue: oldValue, newValue: newValue}
+
+        setRentPriceInput(newValue);
+
+        if (!rentPayments || rentPayments.length < 1) return;
+
+        const calculatedRentPayments = calculateRentPayments({
+            rentAdvance: rentAdvanceInput,
+            rentPeriod: rentPeriodInput,
+            rentPrice: rentPriceInput,
+            rentPaymentsPerYear: rentPaymentsPerYearInput,
+            contractLeaseDate: rentModalData.contractLeaseDate,
+            rentPayments: editedRentPayments
+        }, action);
+
+        setRentPayments(calculatedRentPayments);
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
+            ...e,
+            rentValue: String(e.rentValue || "0"),
+            rentValuePaid: String(e.rentValuePaid || "0")
+        })));
+        setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
+    }
+
+    const handleRentPaymentsPerYearChange = (oldValue: any, newValue: any) => {
+        if (isNaN(parseFloat(newValue))) {
+            newValue = 1
+        }
+
+        const action = {initiator: "rentPaymentsPerYear", oldValue: oldValue, newValue: newValue}
+
+        setRentPaymentsPerYearInput(newValue);
+
+        if (!rentPayments || rentPayments.length < 1) return;
+
+        const calculatedRentPayments = calculateRentPayments({
+            rentAdvance: rentAdvanceInput,
+            rentPeriod: rentPeriodInput,
+            rentPrice: rentPriceInput,
+            rentPaymentsPerYear: rentPaymentsPerYearInput,
+            contractLeaseDate: rentModalData.contractLeaseDate,
+            rentPayments: editedRentPayments
+        }, action);
+
+        setRentPayments(calculatedRentPayments);
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
+            ...e,
+            rentValue: String(e.rentValue || "0"),
+            rentValuePaid: String(e.rentValuePaid || "0")
+        })));
+        setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
+    }
+
+    const handleEditRentPayments = ({rentValue, rentValuePaid, rentIsPaid}: any, i: number) => {
+        const newRentPayments = [...editedRentPayments]
+
+        if (rentValue !== undefined || rentValue === "") {
+            newRentPayments[i].rentValue = rentValue
+        } else if (rentValuePaid !== undefined || rentValuePaid === "") {
+            newRentPayments[i].rentValuePaid = rentValuePaid
+        } else if (rentIsPaid !== undefined) {
+            newRentPayments[i].rentIsPaid = !rentIsPaid
+            if (newRentPayments[i].rentIsPaid === true) {
+                newRentPayments[i].rentValuePaid = newRentPayments[i].rentValue;
+                newRentPayments[i].rentValue = 0;
+            } else if (newRentPayments[i].rentIsPaid === false) {
+                const tempValue = newRentPayments[i].rentValue;
+                newRentPayments[i].rentValue = newRentPayments[i].rentValuePaid;
+                newRentPayments[i].rentValuePaid = tempValue;
+            }
+        }
+
+        setEditedRentPayments(newRentPayments)
     };
-
-    const handleRentInputsChange = (e: any) => {
-        if (e.target.name === "rentAdvance") {
-            setRentAdvanceInput(parseFloat(e.target.value));
-        } else if (e.target.name === "rentPeriod") {
-            setRentPeriodInput(parseInt(e.target.value, 10));
-        } else if (e.target.name === "rentPrice") {
-            setRentPriceInput(parseFloat(e.target.value));
-        }
-    };
-
-    const handleEditRentPrice = (rentPaymentsRow: RentPayments, newValue: string) => {
-        const updatedRentPayments: RentPayments[] = [...editedRentPayments];
-
-        const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear);
-
-        if (rowIndex !== -1) {
-            updatedRentPayments[rowIndex].rentPrice = Number(newValue);
-        } else {
-            updatedRentPayments.push({
-                ...rentPaymentsRow,
-                rentPrice: Number(newValue),
-            });
-        }
-
-        setEditedRentPayments(updatedRentPayments);
-    };
-
-    const handleEditRentStatus = (rentPaymentsRow: RentPayments) => {
-        const updatedRentPayments: RentPayments[] = [...editedRentPayments];
-
-        const rowIndex = updatedRentPayments.findIndex((e) => e.rentYear === rentPaymentsRow.rentYear);
-
-        if (rowIndex !== -1) {
-            updatedRentPayments[rowIndex].rentIsPaid = !updatedRentPayments[rowIndex].rentIsPaid;
-        } else {
-            updatedRentPayments.push({
-                ...rentPaymentsRow,
-                rentIsPaid: !rentPaymentsRow.rentIsPaid,
-            });
-        }
-
-        setEditedRentPayments(updatedRentPayments);
-    };
-
 
     const table = useMantineReactTable({
         // @ts-ignore
@@ -715,8 +800,8 @@ export default function Table() {
         mantineTableBodyRowProps: ({table, row}) => ({
             onDoubleClick: async () => {
                 if (!editingRow) {
-                    const originalRow = {...row.original, id: null, isLeased: null};
-                    const changedRow = {...row._valuesCache, id: null, isLeased: null};
+                    // const originalRow = {...row.original, id: null, isLeased: null};
+                    // const changedRow = {...row._valuesCache, id: null, isLeased: null};
 
                     table.setEditingRow(row);
                 }
@@ -953,8 +1038,8 @@ export default function Table() {
                     setRentAdvanceInput(0);
                     setRentPeriodInput(0);
                     setRentPriceInput(0);
+                    setRentPaymentsPerYearInput(1);
                     setRentPayments([]);
-                    setEditedRentPayments([]);
                     closeRentModal();
                 }}
                 title={<p className="text-xl font-bold">Деталі орендної плати</p>}
@@ -964,41 +1049,81 @@ export default function Table() {
                     <div>
                         <div className="flex flex-row items-center mb-4">
                             <p className="text-md font-semibold w-32">Аванс</p>
-                            <Input
-                                type="number"
-                                name="rentAdvance"
+                            <NumberInput
                                 value={rentAdvanceInput}
-                                onChange={handleRentInputsChange}
+                                onChange={(newValue) => handleRentAdvanceChange(rentAdvanceInput, newValue)}
+                                min={0}
+                                hideControls
                                 className="w-20"
                             />
                         </div>
                         <div className="flex flex-row items-center mb-4">
                             <p className="text-md font-semibold w-32">Термін оренди</p>
-                            <Input
-                                type="number"
-                                name="rentPeriod"
+                            <NumberInput
                                 value={rentPeriodInput}
-                                onChange={handleRentInputsChange}
+                                onChange={(newValue) => handleRentPeriodChange(rentPeriodInput, newValue)}
+                                min={0}
+                                max={50}
+                                stepHoldDelay={250}
+                                stepHoldInterval={(t) => Math.max(1000 / t ** 2, 25)}
                                 className="w-20"
                             />
                         </div>
                         <div className="flex flex-row items-center mb-4">
-                            <p className="text-md font-semibold w-32">Плата (за рік)</p>
-                            <Input
-                                type="number"
-                                name="rentPrice"
+                            <p className="text-md font-semibold w-32">Плата за рік</p>
+                            <NumberInput
                                 value={rentPriceInput}
-                                onChange={handleRentInputsChange}
+                                onChange={(newValue) => handleRentPriceChange(rentPriceInput, newValue)}
+                                min={0}
+                                hideControls
                                 className="w-20"
                             />
                         </div>
+                        <div className="flex flex-row items-center mb-4">
+                            <div className="text-md font-semibold w-32 leading-tight">
+                                <p>Кількість оплат</p>
+                                <p>на рік</p>
+                            </div>
+                            <NumberInput
+                                value={rentPaymentsPerYearInput}
+                                onChange={(newValue) => handleRentPaymentsPerYearChange(rentPaymentsPerYearInput, newValue)}
+                                min={1}
+                                max={12}
+                                stepHoldDelay={250}
+                                stepHoldInterval={(t) => Math.max(1000 / t ** 2, 25)}
+                                className="w-20"
+                            />
+                        </div>
+                        {
+                            (rentPayments.length < 1 || !rentPayments) && (
+                                <button
+                                    className={
+                                        "mt-1 mb-2 flex-grow flex-shrink px-4 py-2 rounded hover:bg-gradient-to-r  transition-all ease-out duration-300 " +
+                                        (initiateButtonDisabled()
+                                            ? "text-gray-100 bg-gray-500"
+                                            : "text-white bg-orange-500 hover:from-orange-500 hover:to-orange-400 hover:ring-orange-400 hover:ring-2 hover:ring-offset-2")
+                                    }
+                                    style={{
+                                        whiteSpace: "nowrap",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                    }}
+                                    onClick={initiateRentPayments}
+                                    disabled={initiateButtonDisabled()}
+                                >
+                                    <span className={"relative text-center"}>Розрахувати</span>
+                                </button>
+                            )
+                        }
                         {rentModalData?.contractLeaseDate ? (
                             <div className="flex flex-col items-start">
                                 <table className="border-collapse border border-slate-400 mt-2">
                                     <thead>
                                     <tr>
-                                        <th className="border border-slate-300 p-4 w-24">Рік</th>
+                                        <th className="border border-slate-300 p-4 w-14">Рік</th>
                                         <th className="border border-slate-300 p-4 w-40">Сума до сплати</th>
+                                        <th className="border border-slate-300 p-4 w-20">Сплачена сума</th>
                                         <th className="border border-slate-300 p-4" style={{width: "74px"}}></th>
                                     </tr>
                                     </thead>
@@ -1006,63 +1131,63 @@ export default function Table() {
                                     {rentPayments
                                         ?.slice(
                                             (rentPaymentsActivePage - 1) * 5,
-                                            Math.min((rentPaymentsActivePage - 1) * 5 + 5, rentPayments.length)
+                                            Math.min(rentPaymentsActivePage * 5, rentPayments.length)
                                         )
-                                        .map((rentRow, i) => (
-                                            <tr key={i}>
-                                                <td className="border border-slate-300 p-4 text-center">
-                                                    {rentRow.rentYear}
-                                                </td>
-                                                <td
-                                                    className="border border-slate-300 p-4 text-center w-20"
-                                                    style={{height: "69px"}}
-                                                    onClick={() => {
-                                                        setEditedRowIndex(i);
-                                                    }}
-                                                    onBlur={() => setEditedRowIndex(-1)}
-                                                >
-                                                    {i === editedRowIndex ? (
+                                        .map((rentRow, i) => {
+                                            const index = (rentPaymentsActivePage - 1) * 5 + i;
+                                            return (
+                                                <tr key={index}>
+                                                    <td className="border border-slate-300 p-4 text-center">
+                                                        {rentRow.rentYear}
+                                                    </td>
+                                                    <td
+                                                        className="border border-slate-300 p-4 text-center w-40"
+                                                        style={{height: "69px"}}
+                                                    >
                                                         <Input
-                                                            type="text"
                                                             style={{
                                                                 width: "100%",
                                                                 height: "100%",
                                                                 margin: 0,
                                                                 padding: "0",
-                                                                boxSizing: "border-box"
+                                                                boxSizing: "border-box",
                                                             }}
-                                                            value={
-                                                                editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice?.toString()
-                                                                || rentRow.rentPrice.toString()
+                                                            value={editedRentPayments[index].rentValue}
+                                                            onChange={(e) =>
+                                                                handleEditRentPayments({rentValue: e.target.value}, index)
                                                             }
-                                                            onChange={(e) => handleEditRentPrice(rentRow, e.target.value)}
                                                         />
-                                                    ) : editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice !== undefined
-                                                        ? editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentPrice
-                                                        : rentRow.rentPrice
-                                                    }
-                                                </td>
-                                                <td className="w-16 border border-slate-300">
-                                                    <div className="flex justify-center items-center h-full">
-                                                        {editedRentPayments.find((e) => e.rentYear === rentRow.rentYear) ? (
-                                                            rentIsPaidIcon(
-                                                                editedRentPayments.find((e) => e.rentYear === rentRow.rentYear)?.rentIsPaid,
-                                                                rentRow
-                                                            )
-                                                        ) : (
-                                                            rentIsPaidIcon(rentRow.rentIsPaid, rentRow)
-                                                        )}
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                    <td className="border border-slate-300 p-4 text-center">
+                                                        <Input
+                                                            style={{
+                                                                width: "100%",
+                                                                height: "100%",
+                                                                margin: 0,
+                                                                padding: "0",
+                                                                boxSizing: "border-box",
+                                                            }}
+                                                            value={editedRentPayments[index].rentValuePaid}
+                                                            onChange={(e) =>
+                                                                handleEditRentPayments({rentValuePaid: e.target.value}, index)
+                                                            }
+                                                        />
+                                                    </td>
+                                                    <td className="w-16 border border-slate-300">
+                                                        <div className="flex justify-center items-center h-full">
+                                                            {rentIsPaidIcon(editedRentPayments[index].rentIsPaid, index)}
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
                                     </tbody>
                                 </table>
-                                <div className="flex justify-center mt-3.5">
+                                <div className="flex w-full justify-center mt-2.5">
                                     <Pagination
                                         value={rentPaymentsActivePage}
                                         onChange={setRentPaymentActivePage}
-                                        total={10}
+                                        total={rentPaymentsTotalPages}
                                         size="md"
                                         style={isMobile ? {gap: 1.5, margin: 0} : {gap: 5, margin: 0}}
                                     />
@@ -1077,12 +1202,13 @@ export default function Table() {
                             className="mt-6 w-full px-6 py-2 font-semibold rounded bg-green-500 hover:bg-gradient-to-r hover:from-green-500 hover:to-green-400 text-white hover:ring-2 hover:ring-offset-2 hover:ring-green-400 transition-all ease-out duration-300"
                             style={{whiteSpace: "nowrap"}}
                             onClick={async () => {
-                                const updatedRentPayments = getUpdatedRentPayments();
+                                const updatedRentPayments = getUpdatedRentPayments(editedRentPayments);
                                 const updatedRentDetails = {
                                     id: rentModalData?.id,
                                     rent_advance: Number(rentAdvanceInput),
                                     rent_period: Number(rentPeriodInput),
                                     rent_price: Number(rentPriceInput),
+                                    rent_payments_per_year: Number(rentPaymentsPerYearInput),
                                     rent_payments: updatedRentPayments || null,
                                 };
                                 const res = await toast.promise(updateTableData(updatedRentDetails), {
@@ -1091,7 +1217,6 @@ export default function Table() {
                                     error: <b>Виникла помилка.</b>,
                                 });
                                 if (res.ok) {
-                                    setEditedRentPayments([]);
                                     setRentPayments(updatedRentPayments);
                                 }
                             }}

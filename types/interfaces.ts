@@ -35,7 +35,8 @@ export interface UserPublic {
 
 export interface RentPayments {
     rentYear: number
-    rentPrice: number
+    rentValue: number
+    rentValuePaid: number
     rentIsPaid: boolean
 }
 
@@ -43,6 +44,7 @@ export interface RentDetails {
     rentAdvance: number,
     rentPeriod: number,
     rentPrice: number,
+    rentPaymentsPerYear: number,
     contractLeaseDate: string,
     rentPayments: RentPayments[]
 }
