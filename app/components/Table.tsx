@@ -38,6 +38,7 @@ import {EditDateRange, EditNumberInput, EditTextArea} from "./CustomEditComponen
 import dateToLocalFormat from "../utils/dateToLocalFormat";
 import {calculateRentValuePaid, calculateRentValueNotPaid} from "@/app/utils/tableCalculations";
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
+import {validateCadastral} from "@/app/utils/validateInputs";
 
 dayjs.extend(customParseFormat);
 
@@ -306,6 +307,15 @@ export default function Table() {
             {
                 header: "Кадастровий номер",
                 accessorKey: "cadastral",
+                // mantineEditTextInputProps: {
+                //     onChange: (event: any) => {
+                //         const value = event.target.value;
+                //
+                //         if (!value) {
+                //             notifyError("Error, cadastral required!")
+                //         }
+                //     }
+                // },
                 size: 200,
             },
             {
@@ -600,6 +610,11 @@ export default function Table() {
     );
 
     const handleCreateTableData = async ({values, table}: any) => {
+        if (!validateCadastral(values.cadastral)) {
+            notifyError("Невірний формат Кадастрового номеру!");
+            return;
+        }
+
         const res = await toast.promise(
             createTableData({
                 ...values,
@@ -618,6 +633,11 @@ export default function Table() {
     };
 
     const handleSaveTableData = async ({values, table}: any) => {
+        if (!validateCadastral(values.cadastral)) {
+            notifyError("Невірний формат Кадастрового номеру!");
+            return;
+        }
+
         const res = await toast.promise(
             updateTableData({
                 ...values,
