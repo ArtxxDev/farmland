@@ -27,18 +27,18 @@ export const rentPaymentsInitial = (rentDetails: RentDetails) => {
                     rentRow.rentValuePaid = excessPayment;
                     rentExcess -= excessPayment;
                     rentAdvance -= excessPayment;
-                    rentRow.rentValue -= excessPayment;
+                    rentRow.rentValue = Number((rentRow.rentValue - excessPayment).toFixed(2));
                 }
 
                 // Pay the remaining amount from the advance
                 if (rentAdvance >= rentRow.rentValue) {
-                    rentRow.rentValuePaid += rentRow.rentValue;
+                    rentRow.rentValuePaid = Number((rentRow.rentValuePaid + rentRow.rentValue).toFixed(2));
                     rentAdvance -= rentRow.rentValue;
                     rentRow.rentValue = 0;
                     rentRow.rentIsPaid = true;
                 } else {
-                    rentRow.rentValuePaid += rentAdvance;
-                    rentRow.rentValue -= rentAdvance;
+                    rentRow.rentValuePaid = Number((rentRow.rentValuePaid + rentAdvance).toFixed(2));
+                    rentRow.rentValue = Number((rentRow.rentValue - rentAdvance).toFixed(2));
                     rentAdvance = 0;
                 }
             }

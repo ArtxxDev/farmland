@@ -1,17 +1,17 @@
-import {Textarea} from "@mantine/core"
+import {NumberInput, Textarea} from "@mantine/core"
 import {DatePickerInput} from "@mantine/dates"
 import React from "react"
-import {useEdit, useEditDate} from "@/app/utils/editComponentsHandlers"
+import {useEditText, useEditDate, useEditNumber} from "@/app/utils/editComponentsHandlers"
 
 export function EditTextArea(props: any) {
-    const {value, handleOnChange, handleBlur} = useEdit(props)
+    const {value, handleOnChange, handleBlur} = useEditText(props)
 
     return (
         <Textarea
-            placeholder={props.column.columnDef.header}
             value={value || ""}
-            onBlur={handleBlur}
             onChange={(e) => handleOnChange(e.currentTarget.value)}
+            onBlur={handleBlur}
+            placeholder={props.column.columnDef.header}
         />
     )
 }
@@ -21,14 +21,30 @@ export function EditDateRange(props: any) {
 
     return (
         <DatePickerInput
-            dropdownType="modal"
-            placeholder={props.column.columnDef.header}
-            locale="ru"
-            valueFormat="DD.MM.YYYY"
             value={value}
-            onBlur={handleBlur}
+            valueFormat="DD.MM.YYYY"
             onChange={(newValue) => handleOnChange(newValue)}
+            onBlur={handleBlur}
+            dropdownType="modal"
+            locale="ru"
+            placeholder={props.column.columnDef.header}
             clearable
+        />
+    )
+}
+
+export function EditNumberInput(props: any) {
+    const {value, handleOnChange, handleBlur} = useEditNumber(props)
+
+    return (
+        <NumberInput
+            value={value || ""}
+            onChange={(newValue) => handleOnChange(newValue)}
+            onBlur={handleBlur}
+            placeholder={props.column.columnDef.header}
+            min={0}
+            precision={props.precision}
+            hideControls
         />
     )
 }

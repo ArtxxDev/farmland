@@ -34,7 +34,7 @@ import {useDisclosure} from "@mantine/hooks";
 import localization from "@/constants/tableLocalization";
 import {notifyError} from "@/app/utils/notifications";
 import ExclamationIcon from "@/app/components/ExclamationIcon";
-import {EditDateRange, EditTextArea} from "./CustomEditComponents";
+import {EditDateRange, EditNumberInput, EditTextArea} from "./CustomEditComponents";
 import dateToLocalFormat from "../utils/dateToLocalFormat";
 import {calculateRentValuePaid, calculateRentValueNotPaid} from "@/app/utils/tableCalculations";
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
@@ -292,6 +292,18 @@ export default function Table() {
                 },
             },
             {
+                header: "Сільска рада / Cелищна рада / Міська рада",
+                accessorKey: "council",
+                filterVariant: "multi-select",
+                mantineFilterMultiSelectProps: {
+                    //@ts-ignore
+                    data: [...new Set(fetchedData.map((e) => e.council ? e.council : null))]
+                },
+                Edit: (props) => {
+                    return <EditTextArea {...props} />;
+                },
+            },
+            {
                 header: "Кадастровий номер",
                 accessorKey: "cadastral",
                 size: 200,
@@ -308,7 +320,7 @@ export default function Table() {
             {
                 header: "Площа ділянки",
                 accessorKey: "area",
-                accessorFn: (row: any) => row.area ? Number(row.area).toFixed(2) : null,
+                accessorFn: (row: any) => row.area ? Number(row.area).toFixed(3) : null,
                 filterVariant: "range-slider",
                 filterFn: "rangeSlider",
                 mantineFilterRangeSliderProps: {
@@ -320,11 +332,14 @@ export default function Table() {
                     max: slidersRange.area.max,
                     thumbSize: 15,
                 },
-                Cell: ({cell}: any) => cell.getValue(),
+                Cell: ({cell}: any) => Number(cell.getValue()) || null,
+                Edit: (props) => {
+                    return <EditNumberInput {...props} precision={3} />;
+                },
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
                         Загальна площа
-                        <Box>{totalArea.toFixed(2)}</Box>
+                        <Box>{totalArea.toFixed(3)} га</Box>
                     </Stack>
                 ),
             },
@@ -342,6 +357,10 @@ export default function Table() {
                     max: slidersRange.ngo.max,
                     thumbSize: 15
                 }),
+                Cell: ({cell}: any) => Number(cell.getValue()) || null,
+                Edit: (props) => {
+                    return <EditNumberInput {...props} precision={2} />;
+                },
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
                         Загальне НГО
@@ -407,6 +426,9 @@ export default function Table() {
                 filterVariant: "range-slider",
                 filterFn: "rangeSlider",
                 Cell: ({cell}) => cell.getValue() ? Number(cell.getValue()).toFixed(2) : null,
+                Edit: (props) => {
+                    return <EditNumberInput {...props} precision={2} />;
+                },
                 mantineFilterRangeSliderProps: () => ({
                     size: "lg",
                     minRange: 10,
@@ -579,7 +601,12 @@ export default function Table() {
 
     const handleCreateTableData = async ({values, table}: any) => {
         const res = await toast.promise(
-            createTableData(values),
+            createTableData({
+                ...values,
+                area: Number(values.area) || null,
+                ngo: Number(values.ngo) || null,
+                expenses: Number(values.expenses) || null,
+            }),
             {
                 loading: <b>Зберігається...</b>,
                 success: <b>Інформація успішно додана!</b>,
@@ -592,7 +619,12 @@ export default function Table() {
 
     const handleSaveTableData = async ({values, table}: any) => {
         const res = await toast.promise(
-            updateTableData(values),
+            updateTableData({
+                ...values,
+                area: Number(values.area) || null,
+                ngo: Number(values.ngo) || null,
+                expenses: Number(values.expenses) || null,
+            }),
             {
                 loading: <b>Зберігається...</b>,
                 success: <b>Інформація успішно збережена!</b>,
@@ -1053,6 +1085,7 @@ export default function Table() {
                                 value={rentAdvanceInput}
                                 onChange={(newValue) => handleRentAdvanceChange(rentAdvanceInput, newValue)}
                                 min={0}
+                                precision={2}
                                 hideControls
                                 className="w-20"
                             />
@@ -1075,6 +1108,7 @@ export default function Table() {
                                 value={rentPriceInput}
                                 onChange={(newValue) => handleRentPriceChange(rentPriceInput, newValue)}
                                 min={0}
+                                precision={2}
                                 hideControls
                                 className="w-20"
                             />
