@@ -32,13 +32,14 @@ import CrossIcon from "@/app/components/CrossIcon";
 import PieChart from "@/app/components/PieChart";
 import {useDisclosure} from "@mantine/hooks";
 import localization from "@/constants/tableLocalization";
-import {notifyError} from "@/app/utils/notifications";
+import {notifyError, notifySuccess} from "@/app/utils/notifications";
 import ExclamationIcon from "@/app/components/ExclamationIcon";
 import {EditDateRange, EditNumberInput, EditTextArea} from "./CustomEditComponents";
 import dateToLocalFormat from "../utils/dateToLocalFormat";
 import {calculateRentValuePaid, calculateRentValueNotPaid} from "@/app/utils/tableCalculations";
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
 import {validateCadastral} from "@/app/utils/validateInputs";
+import isValidDate from "@/app/utils/isValidDate";
 
 dayjs.extend(customParseFormat);
 
@@ -53,6 +54,7 @@ export default function Table() {
 
     const [openedRentModal, {open: openRentModal, close: closeRentModal}] = useDisclosure(false);
     const [rentModalData, setRentModalData] = useState<any>(null);
+    const [rentDetailsCreating, setRentDetailsCreating] = useState<any>({});
 
     const [rentAdvanceInput, setRentAdvanceInput] = useState<number>(0);
     const [rentPeriodInput, setRentPeriodInput] = useState<number>(0);
@@ -200,21 +202,40 @@ export default function Table() {
     useEffect(() => {
         if (openedRentModal && rentModalData && fetchedData) {
             const row: any = {...fetchedData.find((data) => data.id === rentModalData?.id)};
-            const totalPages = row.rent_payments ? Math.ceil(row.rent_payments.length / 5) : 1;
 
-            setRentPaymentsTotalPages(totalPages);
-            setRentAdvanceInput(!isNaN(parseFloat(row.rent_advance)) ? row.rent_advance : 0);
-            setRentPeriodInput(!isNaN(parseFloat(row.rent_period)) ? row.rent_period : 0);
-            setRentPriceInput(!isNaN(parseFloat(row.rent_price)) ? row.rent_price : 0);
-            setRentPaymentsPerYearInput(!isNaN(parseFloat(row.rent_payments_per_year)) ? row.rent_payments_per_year : 1)
-            setRentPayments(row.rent_payments || []);
-            //@ts-ignore
-            setEditedRentPayments((row.rent_payments || []).map((e: any) => ({
-                ...e,
-                rentValue: String(e.rentValue || "0"),
-                rentValuePaid: String(e.rentValuePaid || "0")
-            })));
-            setRentPaymentActivePage(1);
+            if (Object.keys(row).length > 0) {
+                const totalPages = row.rent_payments ? Math.ceil(row.rent_payments.length / 5) : 1;
+
+                setRentPaymentsTotalPages(totalPages);
+                setRentAdvanceInput(!isNaN(parseFloat(row.rent_advance)) ? row.rent_advance : 0);
+                setRentPeriodInput(!isNaN(parseFloat(row.rent_period)) ? row.rent_period : 0);
+                setRentPriceInput(!isNaN(parseFloat(row.rent_price)) ? row.rent_price : 0);
+                setRentPaymentsPerYearInput(!isNaN(parseFloat(row.rent_payments_per_year)) ? row.rent_payments_per_year : 1)
+                setRentPayments(row.rent_payments || []);
+                //@ts-ignore
+                setEditedRentPayments((row.rent_payments || []).map((e: any) => ({
+                    ...e,
+                    rentValue: String(e.rentValue || "0"),
+                    rentValuePaid: String(e.rentValuePaid || "0")
+                })));
+                setRentPaymentActivePage(1);
+            } else {
+                const totalPages = rentDetailsCreating.rent_payments ? Math.ceil(rentDetailsCreating.rent_payments.length / 5) : 1;
+
+                setRentPaymentsTotalPages(totalPages);
+                setRentAdvanceInput(!isNaN(parseFloat(rentDetailsCreating.rent_advance)) ? rentDetailsCreating.rent_advance : 0);
+                setRentPeriodInput(!isNaN(parseFloat(rentDetailsCreating.rent_period)) ? rentDetailsCreating.rent_period : 0);
+                setRentPriceInput(!isNaN(parseFloat(rentDetailsCreating.rent_price)) ? rentDetailsCreating.rent_price : 0);
+                setRentPaymentsPerYearInput(!isNaN(parseFloat(rentDetailsCreating.rent_payments_per_year)) ? rentDetailsCreating.rent_payments_per_year : 1)
+                setRentPayments(rentDetailsCreating.rent_payments || []);
+                //@ts-ignore
+                setEditedRentPayments((rentDetailsCreating.rent_payments || []).map((e: any) => ({
+                    ...e,
+                    rentValue: String(e.rentValue || "0"),
+                    rentValuePaid: String(e.rentValuePaid || "0")
+                })));
+                setRentPaymentActivePage(1);
+            }
         }
 
     }, [openedRentModal]);
@@ -307,15 +328,6 @@ export default function Table() {
             {
                 header: "Кадастровий номер",
                 accessorKey: "cadastral",
-                // mantineEditTextInputProps: {
-                //     onChange: (event: any) => {
-                //         const value = event.target.value;
-                //
-                //         if (!value) {
-                //             notifyError("Error, cadastral required!")
-                //         }
-                //     }
-                // },
                 size: 200,
             },
             {
@@ -518,7 +530,7 @@ export default function Table() {
                     <div
                         className={`clickable-cell ${cell.getValue() === null ? "empty-cell" : ""}`}
                         onClick={() => {
-                            const {
+                            let {
                                 id,
                                 rent_period,
                                 rent_price,
@@ -526,6 +538,14 @@ export default function Table() {
                                 contract_lease_date,
                                 rent_payments
                             } = row.original;
+
+                            if (!contract_lease_date) {
+                                const date = row._valuesCache.contract_lease_date;
+
+                                if (isValidDate(date)) {
+                                    contract_lease_date = dayjs(date, "DD.MM.YYYY").format()
+                                }
+                            }
 
                             if (rent_period || rent_price || rent_advance || contract_lease_date || rent_payments) {
                                 setRentModalData({
@@ -621,6 +641,11 @@ export default function Table() {
                 area: Number(values.area) || null,
                 ngo: Number(values.ngo) || null,
                 expenses: Number(values.expenses) || null,
+                rent_advance: values.rent_advance || rentDetailsCreating.rent_advance || null,
+                rent_period: values.rent_period || rentDetailsCreating.rent_period || null,
+                rent_price: values.rent_price || rentDetailsCreating.rent_price || null,
+                rent_payments_per_year: values.rent_payments_per_year || rentDetailsCreating.rent_payments_per_year || null,
+                rent_payments: values.rent_payments || rentDetailsCreating.rent_payments || null,
             }),
             {
                 loading: <b>Зберігається...</b>,
@@ -1107,7 +1132,7 @@ export default function Table() {
                                 min={0}
                                 precision={2}
                                 hideControls
-                                className="w-20"
+                                className="w-24"
                             />
                         </div>
                         <div className="flex flex-row items-center mb-4">
@@ -1119,7 +1144,7 @@ export default function Table() {
                                 max={50}
                                 stepHoldDelay={250}
                                 stepHoldInterval={(t) => Math.max(1000 / t ** 2, 25)}
-                                className="w-20"
+                                className="w-24"
                             />
                         </div>
                         <div className="flex flex-row items-center mb-4">
@@ -1130,7 +1155,7 @@ export default function Table() {
                                 min={0}
                                 precision={2}
                                 hideControls
-                                className="w-20"
+                                className="w-24"
                             />
                         </div>
                         <div className="flex flex-row items-center mb-4">
@@ -1145,7 +1170,7 @@ export default function Table() {
                                 max={12}
                                 stepHoldDelay={250}
                                 stepHoldInterval={(t) => Math.max(1000 / t ** 2, 25)}
-                                className="w-20"
+                                className="w-24"
                             />
                         </div>
                         {
@@ -1265,13 +1290,20 @@ export default function Table() {
                                     rent_payments_per_year: Number(rentPaymentsPerYearInput),
                                     rent_payments: updatedRentPayments || null,
                                 };
-                                const res = await toast.promise(updateTableData(updatedRentDetails), {
-                                    loading: <b>Зберігається...</b>,
-                                    success: <b>Інформація успішно збережена!</b>,
-                                    error: <b>Виникла помилка.</b>,
-                                });
-                                if (res.ok) {
+
+                                if (updatedRentDetails.id) {
+                                    const res = await toast.promise(updateTableData(updatedRentDetails), {
+                                        loading: <b>Зберігається...</b>,
+                                        success: <b>Інформація успішно збережена!</b>,
+                                        error: <b>Виникла помилка.</b>,
+                                    });
+                                    if (res.ok) {
+                                        setRentPayments(updatedRentPayments);
+                                    }
+                                }  else {
                                     setRentPayments(updatedRentPayments);
+                                    setRentDetailsCreating(updatedRentDetails);
+                                    notifySuccess("Інформація успішно збережена!");
                                 }
                             }}
                         >
