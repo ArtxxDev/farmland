@@ -28,7 +28,7 @@ export function useEditDate(props: any) {
 
     const [value, setValue] = useState(() => initialValue || null)
 
-    const handleOnChange = (newValue: any) => {
+    const handleOnChange = ({newValue, rentDetailsCreatingEffect}: any) => {
         row._valuesCache[column.id] = dateToLocalFormat(newValue)
 
         if (isCreating) {
@@ -38,6 +38,9 @@ export function useEditDate(props: any) {
         }
 
         setValue(newValue)
+        if (rentDetailsCreatingEffect) {
+            rentDetailsCreatingEffect.setRentDetailsCreating({})
+        }
     }
 
     const handleBlur = () => {

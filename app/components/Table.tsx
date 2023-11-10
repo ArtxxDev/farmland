@@ -508,7 +508,7 @@ export default function Table() {
                     valueFormat: "DD.MM.YYYY",
                 },
                 Edit: (props) => {
-                    return <EditDateRange {...props} />;
+                    return <EditDateRange {...props} rentDetailsCreatingEffect={{rentDetailsCreating, setRentDetailsCreating}}/>;
                 },
                 size: 350,
                 ...columnBlue
@@ -654,8 +654,11 @@ export default function Table() {
             }
         );
 
-        if (res.ok) table.setCreatingRow(null);
-    };
+        if (res.ok) {
+            setRentDetailsCreating({});
+            table.setCreatingRow(null);
+        }
+    }
 
     const handleSaveTableData = async ({values, table}: any) => {
         if (!validateCadastral(values.cadastral)) {
@@ -869,6 +872,10 @@ export default function Table() {
         enableHiding: false,
         onEditingRowSave: handleSaveTableData,
         onCreatingRowSave: handleCreateTableData,
+        onCreatingRowCancel: ({ row, table }) => {
+            setRentDetailsCreating({});
+            table.setEditingRow(null);
+        },
         // @ts-ignore
         onColumnFiltersChange: setColumnFilters,
         // @ts-ignore

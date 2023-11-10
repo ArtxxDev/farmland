@@ -4,7 +4,7 @@ import React from "react"
 import {useEditText, useEditDate, useEditNumber} from "@/app/utils/editComponentsHandlers"
 
 export function EditTextArea(props: any) {
-    const {value, handleOnChange, handleBlur} = useEditText(props)
+    const {value, handleOnChange, handleBlur} = useEditText(props);
 
     return (
         <Textarea
@@ -17,13 +17,17 @@ export function EditTextArea(props: any) {
 }
 
 export function EditDateRange(props: any) {
-    const {value, handleOnChange, handleBlur} = useEditDate(props)
+    const {value, handleOnChange, handleBlur} = useEditDate(props);
 
     return (
         <DatePickerInput
             value={value}
             valueFormat="DD.MM.YYYY"
-            onChange={(newValue) => handleOnChange(newValue)}
+            onChange={(newValue) => {
+                const rentDetailsCreatingEffect = props.rentDetailsCreatingEffect;
+
+                handleOnChange({newValue, rentDetailsCreatingEffect});
+            }}
             onBlur={handleBlur}
             dropdownType="modal"
             locale="ru"
