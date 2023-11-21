@@ -24,7 +24,7 @@ import Link from "next/link";
 import {dateRange, documentFilterFn, leasedFilterFn, range, rangeSlider} from "@/app/utils/filterFunctions";
 import {oblastList} from "@/constants/filterSelectProps";
 import {columnBlue} from "@/constants/commonColumnProps";
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 import "dayjs/locale/ru";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import TickIcon from "@/app/components/TickIcon";
@@ -261,11 +261,19 @@ export default function Table() {
     };
 
     const isDebtor = (row: any) => {
+        const contractLeaseDate = row.contract_lease_date ? dayjs(row.contract_lease_date) : null;
+        const rentPaymentsPerYear = row.rent_payments_per_year;
         const rentPayments = row.rent_payments;
+
+        const isLeapYear = (year: number): boolean => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
+
         const isDebt = (rentPayments: RentPayments[]) => {
             return rentPayments.some((payment) => {
-                const nextYearDate = dayjs(`${payment.rentYear + 1}-01-01`);
-                return payment.rentValue > 0 && !payment.rentIsPaid && dayjs().isAfter(nextYearDate);
+                const daysInYear = isLeapYear(payment.rentYear) ? 366 : 365;
+                const daysBetweenPayments = daysInYear / rentPaymentsPerYear;
+                const nextPaymentDate = dayjs(contractLeaseDate).set("year", payment.rentYear).add(Math.floor(daysBetweenPayments), "day");
+
+                return payment.rentValue > 0 && !payment.rentIsPaid && dayjs().isAfter(nextPaymentDate.subtract(1, "day"));
             });
         };
 
@@ -356,7 +364,7 @@ export default function Table() {
                 },
                 Cell: ({cell}: any) => Number(cell.getValue()) || null,
                 Edit: (props) => {
-                    return <EditNumberInput {...props} precision={3} />;
+                    return <EditNumberInput {...props} precision={3}/>;
                 },
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
@@ -381,7 +389,7 @@ export default function Table() {
                 }),
                 Cell: ({cell}: any) => Number(cell.getValue()) || null,
                 Edit: (props) => {
-                    return <EditNumberInput {...props} precision={2} />;
+                    return <EditNumberInput {...props} precision={2}/>;
                 },
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
@@ -449,7 +457,7 @@ export default function Table() {
                 filterFn: "rangeSlider",
                 Cell: ({cell}) => cell.getValue() ? Number(cell.getValue()).toFixed(2) : null,
                 Edit: (props) => {
-                    return <EditNumberInput {...props} precision={2} />;
+                    return <EditNumberInput {...props} precision={2}/>;
                 },
                 mantineFilterRangeSliderProps: () => ({
                     size: "lg",
@@ -508,7 +516,8 @@ export default function Table() {
                     valueFormat: "DD.MM.YYYY",
                 },
                 Edit: (props) => {
-                    return <EditDateRange {...props} rentDetailsCreatingEffect={{rentDetailsCreating, setRentDetailsCreating}}/>;
+                    return <EditDateRange {...props}
+                                          rentDetailsCreatingEffect={{rentDetailsCreating, setRentDetailsCreating}}/>;
                 },
                 size: 350,
                 ...columnBlue
@@ -696,7 +705,7 @@ export default function Table() {
             rentPrice: rentPriceInput,
             rentPaymentsPerYear: rentPaymentsPerYearInput,
             contractLeaseDate: rentModalData.contractLeaseDate,
-            rentPayments: [], // should we pass rentPayments or editedRentPayments ???
+            rentPayments: [],
         });
 
         setRentPayments(calculatedRentPayments);
@@ -872,7 +881,7 @@ export default function Table() {
         enableHiding: false,
         onEditingRowSave: handleSaveTableData,
         onCreatingRowSave: handleCreateTableData,
-        onCreatingRowCancel: ({ row, table }) => {
+        onCreatingRowCancel: ({row, table}) => {
             setRentDetailsCreating({});
             table.setEditingRow(null);
         },
@@ -1307,7 +1316,7 @@ export default function Table() {
                                     if (res.ok) {
                                         setRentPayments(updatedRentPayments);
                                     }
-                                }  else {
+                                } else {
                                     setRentPayments(updatedRentPayments);
                                     setRentDetailsCreating(updatedRentDetails);
                                     notifySuccess("Інформація успішно збережена!");
