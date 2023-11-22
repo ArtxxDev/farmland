@@ -1,5 +1,10 @@
 import dayjs from "dayjs"
-import {RentDetails, RentPayments} from "@/types/interfaces"
+import "dayjs/locale/ru";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import {RentDetails, RentPayment} from "@/types/interfaces"
+import {calculateNextPaymentDate} from "@/app/utils/calculateNextPaymentDate";
+
+dayjs.extend(customParseFormat);
 
 export const rentPaymentsInitial = (rentDetails: RentDetails) => {
     let {rentAdvance, rentPeriod, rentPrice, rentPaymentsPerYear, contractLeaseDate} = rentDetails
@@ -13,8 +18,15 @@ export const rentPaymentsInitial = (rentDetails: RentDetails) => {
 
     for (let i = 0; i < rentPeriod; i++) {
         for (let j = 0; j < rentPaymentsPerYear; j++) {
-            const rentRow = {
-                rentYear: dayjs(contractLeaseDate).year() + i,
+            const previousIndex = i * rentPaymentsPerYear + j - 1;
+            const previousRentPaymentDate = rentPaymentsInitial[previousIndex]
+                ? dayjs(rentPaymentsInitial[previousIndex].rentPaymentDate)
+                : dayjs(contractLeaseDate);
+
+            const rentRow: RentPayment = {
+                rentPaymentDate: previousIndex >= 0
+                    ? calculateNextPaymentDate(previousRentPaymentDate, rentPaymentsPerYear).toISOString()
+                    : contractLeaseDate,
                 rentValue: Number((rentPrice / rentPaymentsPerYear).toFixed(2)),
                 rentValuePaid: 0,
                 rentIsPaid: false,
@@ -51,12 +63,11 @@ export const rentPaymentsInitial = (rentDetails: RentDetails) => {
         }
     }
 
-
     return rentPaymentsInitial
 }
 
 
-export const calculateRentPayments = (rentDetails: RentDetails, action: any): RentPayments[] => {
+export const calculateRentPayments = (rentDetails: RentDetails, action: any): RentPayment[] => {
     let {rentPeriod, rentPrice, contractLeaseDate, rentPayments, rentPaymentsPerYear} = rentDetails
     let {initiator, oldValue, newValue} = action
 
@@ -64,7 +75,7 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
         rentPeriod = 50
     }
 
-    let calculatedPayments: RentPayments[] = [...rentPayments.map((e: any) =>
+    let calculatedPayments: RentPayment[] = [...rentPayments.map((e: any) =>
         ({...e, rentValue: Number(e.rentValue), rentValuePaid: Number(e.rentValuePaid)}))
     ]
 
@@ -83,7 +94,8 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
                 for (let i = 0; i < newValue - oldValue; i++) {
                     for (let j = 0; j < rentPaymentsPerYear; j++) {
                         calculatedPayments.push({
-                            rentYear: dayjs(contractLeaseDate).year() + newValue - i - 1,
+                            // rentYear: dayjs(contractLeaseDate).year() + newValue - i - 1,
+                            rentPaymentDate: (dayjs(contractLeaseDate).set("year", dayjs(contractLeaseDate).year() - i + 1)).toISOString(),
                             rentValue: Number((rentPrice / rentPaymentsPerYear).toFixed(2)),
                             rentValuePaid: 0,
                             rentIsPaid: false,
@@ -108,7 +120,7 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
                 let newArr: any[] = [];
 
                 for (let i = 0; i < calculatedPayments.length; i += oldValue) {
-                    const tempArr = calculatedPayments.filter(e => e.rentYear === calculatedPayments[i].rentYear);
+                    const tempArr = calculatedPayments.filter(e => dayjs(e.rentPaymentDate).year() === dayjs(calculatedPayments[i].rentPaymentDate).year());
                     newArr = [...newArr, ...tempArr.slice(0, newValue)];
                 }
 
@@ -117,7 +129,8 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
                 for (let i = 0; i < rentPeriod; i++) {
                     for (let j = 0; j < newValue - oldValue; j++) {
                         calculatedPayments.push({
-                            rentYear: rentPayments[i * rentPaymentsPerYear].rentYear,
+                            // rentYear: rentPayments[i * rentPaymentsPerYear].rentYear,
+                            rentPaymentDate: rentPayments[i * rentPaymentsPerYear].rentPaymentDate,
                             rentValue: Number((rentPrice / newValue).toFixed(2)),
                             rentValuePaid: 0,
                             rentIsPaid: false,
@@ -136,7 +149,7 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
         }
     }
 
-    calculatedPayments.sort((a, b) => a.rentYear - b.rentYear)
+    calculatedPayments.sort((a, b) => dayjs(a.rentPaymentDate).unix() - dayjs(b.rentPaymentDate).unix());
 
     return calculatedPayments
 }

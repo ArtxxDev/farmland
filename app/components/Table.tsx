@@ -18,13 +18,13 @@ import {
 } from "@mantine/core";
 import {getTable} from "@/app/utils/clientRequests";
 import {useMutation, useQuery, useQueryClient} from "@tanstack/react-query";
-import {RentPayments, TableData} from "@/types/interfaces";
+import {RentPayment, TableData} from "@/types/interfaces";
 import {IconEdit, IconTrash} from "@tabler/icons-react";
 import Link from "next/link";
 import {dateRange, documentFilterFn, leasedFilterFn, range, rangeSlider} from "@/app/utils/filterFunctions";
 import {oblastList} from "@/constants/filterSelectProps";
 import {columnBlue} from "@/constants/commonColumnProps";
-import dayjs, {Dayjs} from "dayjs";
+import dayjs from "dayjs";
 import "dayjs/locale/ru";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import TickIcon from "@/app/components/TickIcon";
@@ -40,6 +40,7 @@ import {calculateRentValuePaid, calculateRentValueNotPaid} from "@/app/utils/tab
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
 import {validateCadastral} from "@/app/utils/validateInputs";
 import isValidDate from "@/app/utils/isValidDate";
+import {calculateNextPaymentDate} from "@/app/utils/calculateNextPaymentDate";
 
 dayjs.extend(customParseFormat);
 
@@ -61,7 +62,7 @@ export default function Table() {
     const [rentPriceInput, setRentPriceInput] = useState<number>(0);
     const [rentPaymentsPerYearInput, setRentPaymentsPerYearInput] = useState<number>(1);
 
-    const [rentPayments, setRentPayments] = useState<(RentPayments[])>([]);
+    const [rentPayments, setRentPayments] = useState<(RentPayment[])>([]);
     const [editedRentPayments, setEditedRentPayments] = useState<any>([]);
     const [rentPaymentsActivePage, setRentPaymentActivePage] = useState(1);
     const [rentPaymentsTotalPages, setRentPaymentsTotalPages] = useState<number>(1);
@@ -241,7 +242,7 @@ export default function Table() {
     }, [openedRentModal]);
 
 
-    const getUpdatedRentPayments = (editedRentPayments: RentPayments[]) => editedRentPayments
+    const getUpdatedRentPayments = (editedRentPayments: RentPayment[]) => editedRentPayments
         .map((e: any) => ({...e, rentValue: Number(e.rentValue), rentValuePaid: Number(e.rentValuePaid)}))
 
     const rentIsPaidIcon = (rentIsPaid: boolean | undefined, i: number) => {
@@ -265,15 +266,10 @@ export default function Table() {
         const rentPaymentsPerYear = row.rent_payments_per_year;
         const rentPayments = row.rent_payments;
 
-        const isLeapYear = (year: number): boolean => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
-
-        const isDebt = (rentPayments: RentPayments[]) => {
+        const isDebt = (rentPayments: RentPayment[]) => {
             return rentPayments.some((payment) => {
-                const daysInYear = isLeapYear(payment.rentYear) ? 366 : 365;
-                const daysBetweenPayments = daysInYear / rentPaymentsPerYear;
-                const nextPaymentDate = dayjs(contractLeaseDate).set("year", payment.rentYear).add(Math.floor(daysBetweenPayments), "day");
-
-                return payment.rentValue > 0 && !payment.rentIsPaid && dayjs().isAfter(nextPaymentDate.subtract(1, "day"));
+                return payment.rentValue > 0 && !payment.rentIsPaid
+                    && dayjs().isAfter(dayjs(payment.rentPaymentDate));
             });
         };
 
@@ -1136,7 +1132,7 @@ export default function Table() {
                     closeRentModal();
                 }}
                 title={<p className="text-xl font-bold">Деталі орендної плати</p>}
-                size="sm"
+                size="md"
             >
                 {rentModalData && (
                     <div>
@@ -1216,10 +1212,10 @@ export default function Table() {
                                 <table className="border-collapse border border-slate-400 mt-2">
                                     <thead>
                                     <tr>
-                                        <th className="border border-slate-300 p-4 w-14">Рік</th>
-                                        <th className="border border-slate-300 p-4 w-40">Сума до сплати</th>
-                                        <th className="border border-slate-300 p-4 w-20">Сплачена сума</th>
-                                        <th className="border border-slate-300 p-4" style={{width: "74px"}}></th>
+                                        <th className="border border-slate-300 p-4">Дата оплати</th>
+                                        <th className="border border-slate-300 p-4">Сума до сплати</th>
+                                        <th className="border border-slate-300 p-4">Сплачена сума</th>
+                                        <th className="border border-slate-300 p-4"/>
                                     </tr>
                                     </thead>
                                     <tbody>
@@ -1232,43 +1228,38 @@ export default function Table() {
                                             const index = (rentPaymentsActivePage - 1) * 5 + i;
                                             return (
                                                 <tr key={index}>
-                                                    <td className="border border-slate-300 p-4 text-center">
-                                                        {rentRow.rentYear}
+                                                    <td
+                                                        className="border border-slate-300 p-3.5 text-center"
+                                                        style={{width: "18%"}}
+                                                    >
+                                                        {dayjs(rentRow.rentPaymentDate).format("DD.MM.YYYY")}
                                                     </td>
                                                     <td
-                                                        className="border border-slate-300 p-4 text-center w-40"
-                                                        style={{height: "69px"}}
+                                                        className="border border-slate-300 p-3.5 text-center"
+                                                        style={{width: "35.25%"}}
                                                     >
                                                         <Input
-                                                            style={{
-                                                                width: "100%",
-                                                                height: "100%",
-                                                                margin: 0,
-                                                                padding: "0",
-                                                                boxSizing: "border-box",
-                                                            }}
                                                             value={editedRentPayments[index].rentValue}
                                                             onChange={(e) =>
                                                                 handleEditRentPayments({rentValue: e.target.value}, index)
                                                             }
                                                         />
                                                     </td>
-                                                    <td className="border border-slate-300 p-4 text-center">
+                                                    <td
+                                                        className="border border-slate-300 p-3.5 text-center"
+                                                        style={{width: "31.75%"}}
+                                                    >
                                                         <Input
-                                                            style={{
-                                                                width: "100%",
-                                                                height: "100%",
-                                                                margin: 0,
-                                                                padding: "0",
-                                                                boxSizing: "border-box",
-                                                            }}
                                                             value={editedRentPayments[index].rentValuePaid}
                                                             onChange={(e) =>
                                                                 handleEditRentPayments({rentValuePaid: e.target.value}, index)
                                                             }
                                                         />
                                                     </td>
-                                                    <td className="w-16 border border-slate-300">
+                                                    <td
+                                                        className="border border-slate-300 p-3.5"
+                                                        style={{width: "15%"}}
+                                                    >
                                                         <div className="flex justify-center items-center h-full">
                                                             {rentIsPaidIcon(editedRentPayments[index].rentIsPaid, index)}
                                                         </div>
