@@ -7,7 +7,6 @@ import {createRow, MantineReactTable, type MRT_ColumnDef, MRT_Row, useMantineRea
 import {
     ActionIcon,
     Box,
-    Input,
     MantineProvider,
     Modal, NumberInput,
     Pagination,
@@ -40,7 +39,7 @@ import {calculateRentValuePaid, calculateRentValueNotPaid} from "@/app/utils/tab
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
 import {validateCadastral} from "@/app/utils/validateInputs";
 import isValidDate from "@/app/utils/isValidDate";
-import {calculateNextPaymentDate} from "@/app/utils/calculateNextPaymentDate";
+import {DatePickerInput} from "@mantine/dates";
 
 dayjs.extend(customParseFormat);
 
@@ -214,11 +213,7 @@ export default function Table() {
                 setRentPaymentsPerYearInput(!isNaN(parseFloat(row.rent_payments_per_year)) ? row.rent_payments_per_year : 1)
                 setRentPayments(row.rent_payments || []);
                 //@ts-ignore
-                setEditedRentPayments((row.rent_payments || []).map((e: any) => ({
-                    ...e,
-                    rentValue: String(e.rentValue || "0"),
-                    rentValuePaid: String(e.rentValuePaid || "0")
-                })));
+                setEditedRentPayments((row.rent_payments || []).map((e: any) => ({...e})));
                 setRentPaymentActivePage(1);
             } else {
                 const totalPages = rentDetailsCreating.rent_payments ? Math.ceil(rentDetailsCreating.rent_payments.length / 5) : 1;
@@ -230,11 +225,7 @@ export default function Table() {
                 setRentPaymentsPerYearInput(!isNaN(parseFloat(rentDetailsCreating.rent_payments_per_year)) ? rentDetailsCreating.rent_payments_per_year : 1)
                 setRentPayments(rentDetailsCreating.rent_payments || []);
                 //@ts-ignore
-                setEditedRentPayments((rentDetailsCreating.rent_payments || []).map((e: any) => ({
-                    ...e,
-                    rentValue: String(e.rentValue || "0"),
-                    rentValuePaid: String(e.rentValuePaid || "0")
-                })));
+                setEditedRentPayments((rentDetailsCreating.rent_payments || []).map((e: any) => ({...e})));
                 setRentPaymentActivePage(1);
             }
         }
@@ -250,20 +241,18 @@ export default function Table() {
             <TickIcon
                 width={32}
                 height={32}
-                onClick={() => handleEditRentPayments({rentIsPaid}, i)}
+                onClick={() => handleEditRentPayments({rentIsPaid}, null, i)}
             />
         ) : (
             <CrossIcon
                 width={32}
                 height={32}
-                onClick={() => handleEditRentPayments({rentIsPaid}, i)}
+                onClick={() => handleEditRentPayments({rentIsPaid}, null, i)}
             />
         );
     };
 
     const isDebtor = (row: any) => {
-        const contractLeaseDate = row.contract_lease_date ? dayjs(row.contract_lease_date) : null;
-        const rentPaymentsPerYear = row.rent_payments_per_year;
         const rentPayments = row.rent_payments;
 
         const isDebt = (rentPayments: RentPayment[]) => {
@@ -705,11 +694,8 @@ export default function Table() {
         });
 
         setRentPayments(calculatedRentPayments);
-        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
-            ...e,
-            rentValue: String(e.rentValue || "0"),
-            rentValuePaid: String(e.rentValuePaid || "0")
-        })));
+        // @ts-ignore
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({...e})));
         setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
     }
 
@@ -737,11 +723,8 @@ export default function Table() {
         }, action);
 
         setRentPayments(calculatedRentPayments);
-        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
-            ...e,
-            rentValue: String(e.rentValue || "0"),
-            rentValuePaid: String(e.rentValuePaid || "0")
-        })));
+        // @ts-ignore
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({...e})));
         setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
     }
 
@@ -767,11 +750,8 @@ export default function Table() {
         }, action);
 
         setRentPayments(calculatedRentPayments);
-        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
-            ...e,
-            rentValue: String(e.rentValue || "0"),
-            rentValuePaid: String(e.rentValuePaid || "0")
-        })));
+        // @ts-ignore
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({...e})));
         setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
     }
 
@@ -796,11 +776,8 @@ export default function Table() {
         }, action);
 
         setRentPayments(calculatedRentPayments);
-        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
-            ...e,
-            rentValue: String(e.rentValue || "0"),
-            rentValuePaid: String(e.rentValuePaid || "0")
-        })));
+        // @ts-ignore
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({...e})));
         setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
     }
 
@@ -825,23 +802,35 @@ export default function Table() {
         }, action);
 
         setRentPayments(calculatedRentPayments);
-        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({
-            ...e,
-            rentValue: String(e.rentValue || "0"),
-            rentValuePaid: String(e.rentValuePaid || "0")
-        })));
+        // @ts-ignore
+        setEditedRentPayments((calculatedRentPayments || []).map((e: any) => ({...e})));
         setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
     }
 
-    const handleEditRentPayments = ({rentValue, rentValuePaid, rentIsPaid}: any, i: number) => {
+    const handleEditRentPayments = ({rentPaymentDate, rentValue, rentValuePaid, rentIsPaid}: any, oldValue: any, i: number) => {
         const newRentPayments = [...editedRentPayments]
 
         if (rentValue !== undefined || rentValue === "") {
-            newRentPayments[i].rentValue = rentValue
+            if (isNaN(parseFloat(rentValue))) {
+                newRentPayments[i].rentValue = oldValue;
+            } else {
+                newRentPayments[i].rentValue = rentValue;
+
+                if (parseFloat(rentValue) === 0) {
+                    newRentPayments[i].rentIsPaid = true;
+                } else if (parseFloat(rentValue) > 0) {
+                    newRentPayments[i].rentIsPaid = false;
+                }
+            }
         } else if (rentValuePaid !== undefined || rentValuePaid === "") {
-            newRentPayments[i].rentValuePaid = rentValuePaid
+            if (isNaN(parseFloat(rentValuePaid))) {
+                newRentPayments[i].rentValuePaid = oldValue;
+            } else {
+                newRentPayments[i].rentValuePaid = rentValuePaid;
+            }
         } else if (rentIsPaid !== undefined) {
-            newRentPayments[i].rentIsPaid = !rentIsPaid
+            newRentPayments[i].rentIsPaid = !rentIsPaid;
+
             if (newRentPayments[i].rentIsPaid === true) {
                 newRentPayments[i].rentValuePaid = newRentPayments[i].rentValue;
                 newRentPayments[i].rentValue = 0;
@@ -850,9 +839,11 @@ export default function Table() {
                 newRentPayments[i].rentValue = newRentPayments[i].rentValuePaid;
                 newRentPayments[i].rentValuePaid = tempValue;
             }
+        } else if (rentPaymentDate !== undefined) {
+            newRentPayments[i].rentPaymentDate = rentPaymentDate;
         }
 
-        setEditedRentPayments(newRentPayments)
+        setEditedRentPayments(newRentPayments);
     };
 
     const table = useMantineReactTable({
@@ -1132,7 +1123,7 @@ export default function Table() {
                     closeRentModal();
                 }}
                 title={<p className="text-xl font-bold">Деталі орендної плати</p>}
-                size="md"
+                size="27.5rem"
             >
                 {rentModalData && (
                     <div>
@@ -1232,28 +1223,41 @@ export default function Table() {
                                                         className="border border-slate-300 p-3.5 text-center"
                                                         style={{width: "18%"}}
                                                     >
-                                                        {dayjs(rentRow.rentPaymentDate).format("DD.MM.YYYY")}
-                                                    </td>
-                                                    <td
-                                                        className="border border-slate-300 p-3.5 text-center"
-                                                        style={{width: "35.25%"}}
-                                                    >
-                                                        <Input
-                                                            value={editedRentPayments[index].rentValue}
-                                                            onChange={(e) =>
-                                                                handleEditRentPayments({rentValue: e.target.value}, index)
+                                                        <DatePickerInput
+                                                            value={dayjs(editedRentPayments[index].rentPaymentDate).toDate()}
+                                                            valueFormat="DD.MM.YYYY"
+                                                            onChange={(e: any) =>
+                                                                handleEditRentPayments({rentPaymentDate: e}, editedRentPayments[index].rentPaymentDate, index)
                                                             }
+                                                            variant="unstyled"
                                                         />
                                                     </td>
                                                     <td
                                                         className="border border-slate-300 p-3.5 text-center"
-                                                        style={{width: "31.75%"}}
+                                                        style={{width: "34.53%"}}
                                                     >
-                                                        <Input
-                                                            value={editedRentPayments[index].rentValuePaid}
-                                                            onChange={(e) =>
-                                                                handleEditRentPayments({rentValuePaid: e.target.value}, index)
+                                                        <NumberInput
+                                                            value={editedRentPayments[index].rentValue}
+                                                            onChange={(newValue) =>
+                                                                handleEditRentPayments({rentValue: newValue}, editedRentPayments[index].rentValue, index)
                                                             }
+                                                            min={0}
+                                                            precision={2}
+                                                            hideControls
+                                                        />
+                                                    </td>
+                                                    <td
+                                                        className="border border-slate-300 p-3.5 text-center"
+                                                        style={{width: "32.47%"}}
+                                                    >
+                                                        <NumberInput
+                                                            value={editedRentPayments[index].rentValuePaid}
+                                                            onChange={(newValue) =>
+                                                                handleEditRentPayments({rentValuePaid: newValue}, editedRentPayments[index].rentValuePaid, index)
+                                                            }
+                                                            min={0}
+                                                            precision={2}
+                                                            hideControls
                                                         />
                                                     </td>
                                                     <td

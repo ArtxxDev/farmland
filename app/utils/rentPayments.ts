@@ -32,6 +32,8 @@ export const rentPaymentsInitial = (rentDetails: RentDetails) => {
                 rentIsPaid: false,
             };
 
+            // console.log("prev index:" , previousIndex, "date:", rentRow.rentPaymentDate)
+
             if (rentAdvance > 0) {
                 // Check if there is an excess amount to pay from the previous cycle
                 if (rentExcess > 0) {
@@ -93,6 +95,11 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
             } else if (newValue > oldValue) { // increase the rentPeriod
                 for (let i = 0; i < newValue - oldValue; i++) {
                     for (let j = 0; j < rentPaymentsPerYear; j++) {
+                        const previousIndex = i * (newValue - oldValue) + j;
+                        const previousRentPaymentDate = calculatedPayments[previousIndex]
+                            ? dayjs(calculatedPayments[previousIndex].rentPaymentDate)
+                            : dayjs(contractLeaseDate);
+
                         calculatedPayments.push({
                             // rentYear: dayjs(contractLeaseDate).year() + newValue - i - 1,
                             rentPaymentDate: (dayjs(contractLeaseDate).set("year", dayjs(contractLeaseDate).year() - i + 1)).toISOString(),
@@ -126,17 +133,29 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
 
                 calculatedPayments = [...newArr];
             } else if (newValue > oldValue) { // increase the rentPaymentsPerYear
+                const tempArr = [];
+
                 for (let i = 0; i < rentPeriod; i++) {
                     for (let j = 0; j < newValue - oldValue; j++) {
-                        calculatedPayments.push({
-                            // rentYear: rentPayments[i * rentPaymentsPerYear].rentYear,
-                            rentPaymentDate: rentPayments[i * rentPaymentsPerYear].rentPaymentDate,
+                        const previousIndex = i * (newValue - oldValue) + j;
+                        const previousRentPaymentDate = calculatedPayments[previousIndex]
+                            ? dayjs(calculatedPayments[previousIndex].rentPaymentDate)
+                            : dayjs(contractLeaseDate);
+
+                        const rentRow = {
+                            rentPaymentDate: previousIndex >= 0
+                                ? calculateNextPaymentDate(previousRentPaymentDate, newValue).toISOString()
+                                : contractLeaseDate,
                             rentValue: Number((rentPrice / newValue).toFixed(2)),
                             rentValuePaid: 0,
                             rentIsPaid: false,
-                        })
+                        }
+                        calculatedPayments.push(rentRow);
+                        // tempArr.push(rentRow);
                     }
                 }
+
+
             }
 
             calculatedPayments = calculatedPayments.map(e =>

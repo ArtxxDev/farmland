@@ -8,3 +8,13 @@ export const calculateNextPaymentDate = (previousRentPaymentDate: Dayjs | null, 
     return dayjs(previousRentPaymentDate)
         .add(Math.floor(daysBetweenPayments), "day");
 }
+
+// export const calculatePaymentDates = (previosPayments: Dayjs[], rentPaymentsPerYear: number): Dayjs[] => {
+//     const daysInYear = isLeapYear(dayjs(previosPayments[0]).year()) ? 366 : 365;
+//     const daysBetweenPayments = daysInYear / rentPaymentsPerYear;
+//
+//     // return dayjs(previousRentPaymentDate)
+//     //     .add(Math.floor(daysBetweenPayments), "day");
+//
+//
+// }
