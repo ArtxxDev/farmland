@@ -125,41 +125,41 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
         case "rentPaymentsPerYear": {
             if (newValue < oldValue) { // Reduce the rentPaymentsPerYear
                 // let newArr: any[] = [];
-                const groups: number[] = Array.from(new Set(payments.map(payment => payment.rentPaymentsGroup)));
+                // const groups: number[] = Array.from(new Set(payments.map(payment => payment.rentPaymentsGroup)));
 
-                for (let i = 0; i < groups.length; i++) {
-                    const paymentsInGroup = payments.filter(e => e.rentPaymentsGroup === i);
+                // for (let i = 0; i < groups.length; i++) {
+                    // const paymentsInGroup = payments.filter(e => e.rentPaymentsGroup === i);
                     // const tempArr = calculatedPayments.filter(e => dayjs(e.rentPaymentDate).year() === dayjs(calculatedPayments[i].rentPaymentDate).year());
                     // newArr = [...newArr, ...tempArr.slice(0, newValue)];
-                    calculatedPayments.filter(e => e.rentPaymentsGroup === i - 1)
-                }
+                    // calculatedPayments.filter(e => e.rentPaymentsGroup === i - 1)
+                // }
 
-                calculatedPayments = [...newArr];
+                // calculatedPayments = [...newArr];
             } else if (newValue > oldValue) { // increase the rentPaymentsPerYear
-                const updatedDates = updatePaymentsDate(calculatedPayments, newValue);
-
-                for (let i = 0; i < newValue - oldValue; i++) {
-                    for (let j = 0; j < newValue; j++) {
-                        // const previousIndex = i * (newValue - oldValue) + j;
-                        // const previousRentPaymentDate = calculatedPayments[previousIndex]
-                        //     ? dayjs(calculatedPayments[previousIndex].rentPaymentDate)
-                        //     : dayjs(contractLeaseDate);
-
-                        const rentRow: any = {
-                            rentPaymentsGroup: i,
-                            // rentPaymentDate: updatedDates[j].rentPaymentDate,
-                            // rentPaymentDate: updatePaymentsDate()
-                            rentValue: Number((rentPrice / newValue).toFixed(2)),
-                            rentValuePaid: 0,
-                            rentIsPaid: false,
-                        }
-                        calculatedPayments.push(rentRow);
-                    }
-                }
-
-                calculatedPayments.map((e, i) => {
-
-                })
+                // const updatedDates = updatePaymentsDate(calculatedPayments, newValue);
+                //
+                // for (let i = 0; i < newValue - oldValue; i++) {
+                //     for (let j = 0; j < newValue; j++) {
+                //         // const previousIndex = i * (newValue - oldValue) + j;
+                //         // const previousRentPaymentDate = calculatedPayments[previousIndex]
+                //         //     ? dayjs(calculatedPayments[previousIndex].rentPaymentDate)
+                //         //     : dayjs(contractLeaseDate);
+                //
+                //         const rentRow: any = {
+                //             rentPaymentsGroup: i,
+                //             // rentPaymentDate: updatedDates[j].rentPaymentDate,
+                //             // rentPaymentDate: updatePaymentsDate()
+                //             rentValue: Number((rentPrice / newValue).toFixed(2)),
+                //             rentValuePaid: 0,
+                //             rentIsPaid: false,
+                //         }
+                //         calculatedPayments.push(rentRow);
+                //     }
+                // }
+                //
+                // calculatedPayments.map((e, i) => {
+                //
+                // })
 
             }
 

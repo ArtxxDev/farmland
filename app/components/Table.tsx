@@ -340,7 +340,7 @@ export default function Table() {
             {
                 header: "Площа ділянки",
                 accessorKey: "area",
-                accessorFn: (row: any) => row.area ? Number(row.area).toFixed(3) : null,
+                accessorFn: (row: any) => row.area ? Number(row.area).toFixed(4) : null,
                 filterVariant: "range-slider",
                 filterFn: "rangeSlider",
                 mantineFilterRangeSliderProps: {
@@ -354,7 +354,7 @@ export default function Table() {
                 },
                 Cell: ({cell}: any) => Number(cell.getValue()) || null,
                 Edit: (props) => {
-                    return <EditNumberInput {...props} precision={3}/>;
+                    return <EditNumberInput {...props} precision={4}/>;
                 },
                 Footer: () => (
                     <Stack className="flex flex-col justify-center items-center">
