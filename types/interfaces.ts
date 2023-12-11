@@ -1,3 +1,5 @@
+import {Dayjs} from "dayjs";
+
 export interface TableData {
     "id": number
     "oblast"?: string
@@ -34,6 +36,7 @@ export interface UserPublic {
 }
 
 export interface RentPayment {
+    rentPaymentsGroup: number
     rentPaymentDate: string
     rentValue: number
     rentValuePaid: number

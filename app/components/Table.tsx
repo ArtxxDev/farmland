@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import {createRow, MantineReactTable, type MRT_ColumnDef, MRT_Row, useMantineReactTable} from "mantine-react-table";
 import {
     ActionIcon,
-    Box,
+    Box, Input,
     MantineProvider,
     Modal, NumberInput,
     Pagination,
@@ -33,13 +33,14 @@ import {useDisclosure} from "@mantine/hooks";
 import localization from "@/constants/tableLocalization";
 import {notifyError, notifySuccess} from "@/app/utils/notifications";
 import ExclamationIcon from "@/app/components/ExclamationIcon";
-import {EditDateRange, EditNumberInput, EditTextArea} from "./CustomEditComponents";
+import {EditCadastralInput, EditDateRange, EditNumberInput, EditTextArea} from "./CustomEditComponents";
 import dateToLocalFormat from "../utils/dateToLocalFormat";
 import {calculateRentValuePaid, calculateRentValueNotPaid} from "@/app/utils/tableCalculations";
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
 import {validateCadastral} from "@/app/utils/validateInputs";
 import isValidDate from "@/app/utils/isValidDate";
 import {DatePickerInput} from "@mantine/dates";
+
 
 dayjs.extend(customParseFormat);
 
@@ -291,6 +292,7 @@ export default function Table() {
                 editVariant: "select",
                 mantineEditSelectProps: {
                     data: oblastList,
+                    clearable: true
                 },
                 size: 200,
             },
@@ -303,7 +305,7 @@ export default function Table() {
                     data: [...new Set(fetchedData.map((e) => e.region ? e.region : null))]
                 },
                 Edit: (props) => {
-                    return <EditTextArea {...props} />;
+                    return <EditTextArea {...props} />
                 },
             },
             {
@@ -322,6 +324,9 @@ export default function Table() {
                 header: "Кадастровий номер",
                 accessorKey: "cadastral",
                 size: 200,
+                Edit: (props) => {
+                    return <EditCadastralInput {...props} />
+                },
             },
             {
                 header: "Склад узгідь",
@@ -342,7 +347,7 @@ export default function Table() {
                     size: "lg",
                     precision: 4,
                     minRange: 0.1,
-                    step: 0.1,
+                    step: 0.01,
                     min: slidersRange.area.min,
                     max: slidersRange.area.max,
                     thumbSize: 15,
@@ -666,6 +671,12 @@ export default function Table() {
                 area: Number(values.area) || null,
                 ngo: Number(values.ngo) || null,
                 expenses: Number(values.expenses) || null,
+                region: values.region ? values.region.trim() : null,
+                council: values.council ? values.council.trim() : null,
+                composition: values.composition ? values.composition.trim() : null,
+                owner: values.owner ? values.owner.trim() : null,
+                extract_land: values.extract_land ? values.extract_land.trim() : null,
+                tenant: values.tenant ? values.tenant.trim() : null,
             }),
             {
                 loading: <b>Зберігається...</b>,
@@ -807,16 +818,26 @@ export default function Table() {
         setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
     }
 
-    const handleEditRentPayments = ({rentPaymentDate, rentValue, rentValuePaid, rentIsPaid}: any, oldValue: any, i: number) => {
-        const newRentPayments = [...editedRentPayments]
+    const handleEditRentPayments = (
+        {
+            rentPaymentDate,
+            rentValue,
+            rentValuePaid,
+            rentIsPaid
+        }: any,
+        oldValue: any,
+        i: number
+    ) => {
+        const newRentPayments = [...editedRentPayments];
 
         if (rentValue !== undefined || rentValue === "") {
             if (isNaN(parseFloat(rentValue))) {
                 newRentPayments[i].rentValue = oldValue;
             } else {
+                newRentPayments[i].rentValuePaid -= rentValue - oldValue;
                 newRentPayments[i].rentValue = rentValue;
 
-                if (parseFloat(rentValue) === 0) {
+                if (parseFloat(rentValue) <= 0) {
                     newRentPayments[i].rentIsPaid = true;
                 } else if (parseFloat(rentValue) > 0) {
                     newRentPayments[i].rentIsPaid = false;
@@ -826,13 +847,20 @@ export default function Table() {
             if (isNaN(parseFloat(rentValuePaid))) {
                 newRentPayments[i].rentValuePaid = oldValue;
             } else {
+                newRentPayments[i].rentValue -= rentValuePaid - oldValue;
                 newRentPayments[i].rentValuePaid = rentValuePaid;
+
+                if (parseFloat(newRentPayments[i].rentValue) <= 0) {
+                    newRentPayments[i].rentIsPaid = true;
+                } else if (parseFloat(newRentPayments[i].rentValue) > 0) {
+                    newRentPayments[i].rentIsPaid = false;
+                }
             }
         } else if (rentIsPaid !== undefined) {
             newRentPayments[i].rentIsPaid = !rentIsPaid;
 
             if (newRentPayments[i].rentIsPaid === true) {
-                newRentPayments[i].rentValuePaid = newRentPayments[i].rentValue;
+                newRentPayments[i].rentValuePaid = newRentPayments[i].rentValue + newRentPayments[i].rentValuePaid;
                 newRentPayments[i].rentValue = 0;
             } else if (newRentPayments[i].rentIsPaid === false) {
                 const tempValue = newRentPayments[i].rentValue;
@@ -1229,6 +1257,7 @@ export default function Table() {
                                                             onChange={(e: any) =>
                                                                 handleEditRentPayments({rentPaymentDate: e}, editedRentPayments[index].rentPaymentDate, index)
                                                             }
+                                                            locale="ru"
                                                             variant="unstyled"
                                                         />
                                                     </td>

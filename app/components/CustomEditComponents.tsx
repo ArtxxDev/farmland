@@ -1,7 +1,8 @@
-import {NumberInput, Textarea} from "@mantine/core"
+import {Input, NumberInput, Textarea} from "@mantine/core"
 import {DatePickerInput} from "@mantine/dates"
 import React from "react"
 import {useEditText, useEditDate, useEditNumber} from "@/app/utils/editComponentsHandlers"
+import {IMaskInput} from "react-imask";
 
 export function EditTextArea(props: any) {
     const {value, handleOnChange, handleBlur} = useEditText(props);
@@ -13,7 +14,7 @@ export function EditTextArea(props: any) {
             onBlur={handleBlur}
             placeholder={props.column.columnDef.header}
         />
-    )
+    );
 }
 
 export function EditDateRange(props: any) {
@@ -34,11 +35,11 @@ export function EditDateRange(props: any) {
             placeholder={props.column.columnDef.header}
             clearable
         />
-    )
+    );
 }
 
 export function EditNumberInput(props: any) {
-    const {value, handleOnChange, handleBlur} = useEditNumber(props)
+    const {value, handleOnChange, handleBlur} = useEditNumber(props);
 
     return (
         <NumberInput
@@ -50,5 +51,20 @@ export function EditNumberInput(props: any) {
             precision={props.precision}
             hideControls
         />
-    )
+    );
+}
+
+export function EditCadastralInput(props: any) {
+    const {value, handleOnChange, handleBlur} = useEditText(props);
+
+    return (
+        <Input
+            component={IMaskInput}
+            mask="0000000000:00:000:0000"
+            value={value || ""}
+            onChange={(e) => handleOnChange(e.currentTarget.value)}
+            onBlur={handleBlur}
+            placeholder={props.column.columnDef.header}
+        />
+    );
 }
