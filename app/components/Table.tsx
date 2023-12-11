@@ -645,6 +645,12 @@ export default function Table() {
                 rent_price: values.rent_price || rentDetailsCreating.rent_price || null,
                 rent_payments_per_year: values.rent_payments_per_year || rentDetailsCreating.rent_payments_per_year || null,
                 rent_payments: values.rent_payments || rentDetailsCreating.rent_payments || null,
+                region: values.region ? values.region.trim() : null,
+                council: values.council ? values.council.trim() : null,
+                composition: values.composition ? values.composition.trim() : null,
+                owner: values.owner ? values.owner.trim() : null,
+                extract_land: values.extract_land ? values.extract_land.trim() : null,
+                tenant: values.tenant ? values.tenant.trim() : null,
             }),
             {
                 loading: <b>Зберігається...</b>,
