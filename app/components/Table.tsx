@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import {createRow, MantineReactTable, type MRT_ColumnDef, MRT_Row, useMantineReactTable} from "mantine-react-table";
 import {
     ActionIcon,
-    Box, Input,
+    Box,
     MantineProvider,
     Modal, NumberInput,
     Pagination,
@@ -40,7 +40,6 @@ import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPaymen
 import {validateCadastral} from "@/app/utils/validateInputs";
 import isValidDate from "@/app/utils/isValidDate";
 import {DatePickerInput} from "@mantine/dates";
-
 
 dayjs.extend(customParseFormat);
 
@@ -840,7 +839,12 @@ export default function Table() {
             if (isNaN(parseFloat(rentValue))) {
                 newRentPayments[i].rentValue = oldValue;
             } else {
-                newRentPayments[i].rentValuePaid -= rentValue - oldValue;
+                if (rentValue > newRentPayments[i].rentValuePaid) {
+                    newRentPayments[i].rentValuePaid = 0;
+                } else {
+                    newRentPayments[i].rentValuePaid -= rentValue - oldValue;
+                }
+
                 newRentPayments[i].rentValue = rentValue;
 
                 if (parseFloat(rentValue) <= 0) {
@@ -853,7 +857,13 @@ export default function Table() {
             if (isNaN(parseFloat(rentValuePaid))) {
                 newRentPayments[i].rentValuePaid = oldValue;
             } else {
-                newRentPayments[i].rentValue -= rentValuePaid - oldValue;
+                if (rentValuePaid > newRentPayments[i].rentValue) {
+                    newRentPayments[i].rentValue = 0;
+                } else {
+                    newRentPayments[i].rentValue -= rentValuePaid - oldValue;
+                }
+
+
                 newRentPayments[i].rentValuePaid = rentValuePaid;
 
                 if (parseFloat(newRentPayments[i].rentValue) <= 0) {
