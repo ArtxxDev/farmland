@@ -910,6 +910,7 @@ export default function Table() {
         enableDensityToggle: false,
         enableFullScreenToggle: false,
         enableHiding: false,
+        enableColumnResizing: true,
         onEditingRowSave: handleSaveTableData,
         onCreatingRowSave: handleCreateTableData,
         onCreatingRowCancel: ({row, table}) => {

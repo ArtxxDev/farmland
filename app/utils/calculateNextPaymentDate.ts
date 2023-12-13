@@ -13,11 +13,12 @@ export const calculateNextPaymentDate = (previousRentPaymentDate: Dayjs | null, 
 export const updatePaymentsDate = (payments: RentPayment[], rentPaymentPerYear: number): RentPayment[] => {
     const calculatedPayments = [];
 
+    const daysBetweenPayments = 365 / rentPaymentPerYear;
     const groups: number[] = Array.from(new Set(payments.map(payment => payment.rentPaymentsGroup)));
 
     for (let i = 0; i < groups.length; i++) {
         const paymentsInGroup = payments.filter(e => e.rentPaymentsGroup === i);
-        const daysBetweenPayments = 365 / rentPaymentPerYear;
+
         const startDate = paymentsInGroup[0].rentIsPaid
             ? dayjs(paymentsInGroup[0].rentPaymentDate)
             : dayjs(paymentsInGroup[0].rentPaymentDate).startOf("year");

@@ -33,8 +33,14 @@ export const rentPaymentsInitial = (rentDetails: RentDetails) => {
                 rentIsPaid: false,
             };
 
+            if (i > 0) {
+                const previousPaymentIndex = (i - 1) * rentPaymentsPerYear + j;
+                rentRow.rentPaymentDate = dayjs(rentPaymentsInitial[previousPaymentIndex].rentPaymentDate)
+                    .add(1, 'year')
+                    .toISOString();
+            }
+
             if (rentAdvance > 0) {
-                // Check if there is an excess amount to pay from the previous cycle
                 if (rentExcess > 0) {
                     const excessPayment = Math.min(rentExcess, rentRow.rentValue);
                     rentRow.rentValuePaid = excessPayment;
@@ -56,9 +62,7 @@ export const rentPaymentsInitial = (rentDetails: RentDetails) => {
                 }
             }
 
-            if (rentRow.rentValue === 0) {
-                rentRow.rentIsPaid = true;
-            }
+            if (rentRow.rentValue === 0) rentRow.rentIsPaid = true;
 
             rentPaymentsInitial.push(rentRow);
         }
@@ -123,53 +127,53 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
         }
 
         case "rentPaymentsPerYear": {
-            if (newValue < oldValue) { // Reduce the rentPaymentsPerYear
-                // let newArr: any[] = [];
-                // const groups: number[] = Array.from(new Set(payments.map(payment => payment.rentPaymentsGroup)));
-
-                // for (let i = 0; i < groups.length; i++) {
-                    // const paymentsInGroup = payments.filter(e => e.rentPaymentsGroup === i);
-                    // const tempArr = calculatedPayments.filter(e => dayjs(e.rentPaymentDate).year() === dayjs(calculatedPayments[i].rentPaymentDate).year());
-                    // newArr = [...newArr, ...tempArr.slice(0, newValue)];
-                    // calculatedPayments.filter(e => e.rentPaymentsGroup === i - 1)
-                // }
-
-                // calculatedPayments = [...newArr];
-            } else if (newValue > oldValue) { // increase the rentPaymentsPerYear
-                // const updatedDates = updatePaymentsDate(calculatedPayments, newValue);
-                //
-                // for (let i = 0; i < newValue - oldValue; i++) {
-                //     for (let j = 0; j < newValue; j++) {
-                //         // const previousIndex = i * (newValue - oldValue) + j;
-                //         // const previousRentPaymentDate = calculatedPayments[previousIndex]
-                //         //     ? dayjs(calculatedPayments[previousIndex].rentPaymentDate)
-                //         //     : dayjs(contractLeaseDate);
-                //
-                //         const rentRow: any = {
-                //             rentPaymentsGroup: i,
-                //             // rentPaymentDate: updatedDates[j].rentPaymentDate,
-                //             // rentPaymentDate: updatePaymentsDate()
-                //             rentValue: Number((rentPrice / newValue).toFixed(2)),
-                //             rentValuePaid: 0,
-                //             rentIsPaid: false,
-                //         }
-                //         calculatedPayments.push(rentRow);
-                //     }
-                // }
-                //
-                // calculatedPayments.map((e, i) => {
-                //
-                // })
-
-            }
-
-            calculatedPayments = calculatedPayments.map(e =>
-                !e.rentIsPaid && e.rentValue !== rentPrice / newValue
-                    ? {...e, rentValue: Number((rentPrice / newValue).toFixed(2))}
-                    : e
-            )
-
-            break;
+            // if (newValue < oldValue) { // Reduce the rentPaymentsPerYear
+            //     // let newArr: any[] = [];
+            //     // const groups: number[] = Array.from(new Set(payments.map(payment => payment.rentPaymentsGroup)));
+            //
+            //     // for (let i = 0; i < groups.length; i++) {
+            //     // const paymentsInGroup = payments.filter(e => e.rentPaymentsGroup === i);
+            //     // const tempArr = calculatedPayments.filter(e => dayjs(e.rentPaymentDate).year() === dayjs(calculatedPayments[i].rentPaymentDate).year());
+            //     // newArr = [...newArr, ...tempArr.slice(0, newValue)];
+            //     // calculatedPayments.filter(e => e.rentPaymentsGroup === i - 1)
+            //     // }
+            //
+            //     // calculatedPayments = [...newArr];
+            // } else if (newValue > oldValue) { // increase the rentPaymentsPerYear
+            //     const updatedDates = updatePaymentsDate(calculatedPayments, newValue);
+            //
+            //     for (let i = 0; i < newValue - oldValue; i++) {
+            //         for (let j = 0; j < newValue; j++) {
+            //             // const previousIndex = i * (newValue - oldValue) + j;
+            //             // const previousRentPaymentDate = calculatedPayments[previousIndex]
+            //             //     ? dayjs(calculatedPayments[previousIndex].rentPaymentDate)
+            //             //     : dayjs(contractLeaseDate);
+            //
+            //             const rentRow: any = {
+            //                 rentPaymentsGroup: i,
+            //                 // rentPaymentDate: updatedDates[j].rentPaymentDate,
+            //                 // rentPaymentDate: updatePaymentsDate()
+            //                 rentValue: Number((rentPrice / newValue).toFixed(2)),
+            //                 rentValuePaid: 0,
+            //                 rentIsPaid: false,
+            //             }
+            //             calculatedPayments.push(rentRow);
+            //         }
+            //     }
+            //
+            //     calculatedPayments.map((e, i) => {
+            //
+            //     })
+            //
+            // }
+            //
+            // calculatedPayments = calculatedPayments.map(e =>
+            //     !e.rentIsPaid && e.rentValue !== rentPrice / newValue
+            //         ? {...e, rentValue: Number((rentPrice / newValue).toFixed(2))}
+            //         : e
+            // )
+            //
+            // break;
         }
     }
 
