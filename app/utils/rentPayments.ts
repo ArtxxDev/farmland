@@ -83,22 +83,28 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
             if (newValue < oldValue) { // reduce the rentPeriod
                 calculatedPayments = calculatedPayments.slice(0, calculatedPayments.length - ((oldValue - newValue) * rentPaymentsPerYear));
             } else if (newValue > oldValue) { // increase the rentPeriod
-                for (let i = 0; i < newValue - oldValue; i++) {
-                    for (let j = 0; j < rentPaymentsPerYear; j++) {
-                        const previousIndex = i * (newValue - oldValue) + j;
-                        const previousRentPaymentDate = calculatedPayments[previousIndex]
-                            ? dayjs(calculatedPayments[previousIndex].rentPaymentDate)
-                            : dayjs(contractLeaseDate);
+                const groups: number[] = Array.from(new Set(calculatedPayments.map((payment: {
+                    rentPaymentsGroup: any;
+                }) => payment.rentPaymentsGroup)));
 
+                const paymentsInGroup = calculatedPayments.filter((e: {
+                    rentPaymentsGroup: number;
+                }) => e.rentPaymentsGroup === groups[groups.length - 1]);
+
+                const rentPeriodDiff = newValue - oldValue;
+
+                for (let i = 1; i <= rentPeriodDiff; i++) {
+                    for (let j = 0; j < rentPaymentsPerYear; j++) {
                         calculatedPayments.push({
-                            rentPaymentsGroup: i,
-                            rentPaymentDate: (dayjs(contractLeaseDate).set("year", dayjs(contractLeaseDate).year() - i + 1)).toISOString(),
+                            rentPaymentsGroup: groups.length,
+                            rentPaymentDate: dayjs(paymentsInGroup[j].rentPaymentDate).add(i, "year").toISOString(),
                             rentValue: Number((rentPrice / rentPaymentsPerYear).toFixed(2)),
                             rentValuePaid: 0,
                             rentIsPaid: false,
-                        })
+                        });
                     }
                 }
+
             }
             break;
         }
