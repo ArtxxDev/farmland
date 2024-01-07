@@ -587,7 +587,7 @@ export default function Table() {
                 header: "Здано в оренду",
                 accessorKey: "isLeased",
                 enableEditing: false,
-                accessorFn: (originalRow: any) => originalRow.contract_lease ?
+                accessorFn: (originalRow: any) => originalRow.contract_lease_date || originalRow.contract_lease ?
                     <TickIcon width={32} height={32}/> : <CrossIcon width={32} height={32}/>,
                 filterVariant: "checkbox",
                 filterFn: leasedFilterFn,
