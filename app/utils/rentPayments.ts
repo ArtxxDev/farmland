@@ -120,6 +120,9 @@ export const calculateRentPayments = (rentDetails: RentDetails, action: any): Re
 
         case "rentPaymentsPerYear": {
             if (newValue < oldValue) { // Reduce the rentPaymentsPerYear
+                const dates = updatePaymentsDate(calculatedPayments, newValue)
+                console.log(dates)
+
                 let newArr: any[] = [];
                 const groups: number[] = Array.from(new Set(calculatedPayments.map(payment => payment.rentPaymentsGroup)));
 

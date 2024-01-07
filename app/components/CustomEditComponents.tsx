@@ -1,7 +1,7 @@
-import {Input, NumberInput, Textarea} from "@mantine/core"
-import {DatePickerInput} from "@mantine/dates"
-import React from "react"
-import {useEditText, useEditDate, useEditNumber} from "@/app/utils/editComponentsHandlers"
+import {Input, NumberInput, Textarea, Autocomplete} from "@mantine/core";
+import {DatePickerInput} from "@mantine/dates";
+import React from "react";
+import {useEditText, useEditDate, useEditNumber} from "@/app/utils/editComponentsHandlers";
 import {IMaskInput} from "react-imask";
 
 export function EditTextArea(props: any) {
@@ -65,6 +65,21 @@ export function EditCadastralInput(props: any) {
             onChange={(e) => handleOnChange(e.currentTarget.value)}
             onBlur={handleBlur}
             placeholder={props.column.columnDef.header}
+        />
+    );
+}
+
+export function EditAutocompleteInput(props: any) {
+    const {value, handleOnChange, handleBlur} = useEditText(props);
+    const data = props.data.filter((e: any) => e !== null && e !== "" && e !== undefined)
+
+    return (
+        <Autocomplete
+            value={value || ""}
+            onChange={handleOnChange}
+            onBlur={handleBlur}
+            placeholder={props.column.columnDef.header}
+            data={data}
         />
     );
 }

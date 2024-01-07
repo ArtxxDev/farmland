@@ -21,9 +21,9 @@ export const updatePaymentsDate = (payments: any, rentPaymentPerYear: number): R
     for (let i = 0; i < groups.length; i++) {
         const paymentsInGroup = payments.filter((e: { rentPaymentsGroup: number; }) => e.rentPaymentsGroup === i);
 
-        const startDate = paymentsInGroup[0].rentIsPaid
-            ? dayjs(paymentsInGroup[0].rentPaymentDate)
-            : dayjs(paymentsInGroup[0].rentPaymentDate).startOf("year");
+        // const startDate = paymentsInGroup[0].rentIsPaid
+        //     ? dayjs(paymentsInGroup[0].rentPaymentDate)
+        //     : dayjs(paymentsInGroup[0].rentPaymentDate).startOf("year");
 
         for (let j = 0; j < rentPaymentPerYear; j++) {
             if (i > 0) {

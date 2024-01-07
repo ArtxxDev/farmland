@@ -33,7 +33,13 @@ import {useDisclosure} from "@mantine/hooks";
 import localization from "@/constants/tableLocalization";
 import {notifyError, notifySuccess} from "@/app/utils/notifications";
 import ExclamationIcon from "@/app/components/ExclamationIcon";
-import {EditCadastralInput, EditDateRange, EditNumberInput, EditTextArea} from "./CustomEditComponents";
+import {
+    EditAutocompleteInput,
+    EditCadastralInput,
+    EditDateRange,
+    EditNumberInput,
+    EditTextArea
+} from "./CustomEditComponents";
 import dateToLocalFormat from "../utils/dateToLocalFormat";
 import {calculateRentValuePaid, calculateRentValueNotPaid} from "@/app/utils/tableCalculations";
 import {calculateRentPayments, rentPaymentsInitial} from "@/app/utils/rentPayments";
@@ -281,9 +287,12 @@ export default function Table() {
                     //@ts-ignore
                     data: [...new Set(fetchedData.map((e) => e.region ? e.region : null))]
                 },
-                Edit: (props) => {
-                    return <EditTextArea {...props} />
-                },
+                Edit: (props) =>
+                    <EditAutocompleteInput
+                        {...props}
+                        //@ts-ignore
+                        data={[...new Set(fetchedData.map((e) => e.region ? e.region : null))]}
+                    />
             },
             {
                 header: "Сільска рада / Cелищна рада / Міська рада",
@@ -293,14 +302,12 @@ export default function Table() {
                     //@ts-ignore
                     data: [...new Set(fetchedData.map((e) => e.council ? e.council : null))]
                 },
-                Edit: (props) => {
-                    return <EditTextArea {...props} />;
-                },
+                Edit: (props) => <EditTextArea {...props} />,
             },
             {
                 header: "Кадастровий номер",
                 accessorKey: "cadastral",
-                size: 200,
+                size: 215,
                 Edit: (props) => {
                     return <EditCadastralInput {...props} />
                 },
@@ -313,6 +320,12 @@ export default function Table() {
                     //@ts-ignore
                     data: [...new Set(fetchedData.map((e) => e.composition))]
                 },
+                Edit: (props) =>
+                    <EditAutocompleteInput
+                        {...props}
+                        //@ts-ignore
+                        data={[...new Set(fetchedData.map((e) => e.composition ? e.composition : null))]}
+                    />
             },
             {
                 header: "Площа ділянки",
@@ -373,6 +386,12 @@ export default function Table() {
                     //@ts-ignore
                     data: [...new Set(fetchedData.map((e) => e.owner))]
                 },
+                Edit: (props) =>
+                    <EditAutocompleteInput
+                        {...props}
+                        //@ts-ignore
+                        data={[...new Set(fetchedData.map((e) => e.owner ? e.owner : null))]}
+                    />
             },
             {
                 header: "Договір купівлі-продажу",
@@ -463,6 +482,12 @@ export default function Table() {
                     //@ts-ignore
                     data: [...new Set(fetchedData.map((e) => e.tenant))]
                 },
+                Edit: (props) =>
+                    <EditAutocompleteInput
+                        {...props}
+                        //@ts-ignore
+                        data={[...new Set(fetchedData.map((e) => e.tenant ? e.tenant : null))]}
+                    />,
                 ...columnBlue
             },
             {
@@ -693,8 +718,8 @@ export default function Table() {
         setRentPaymentsTotalPages(Math.ceil(calculatedRentPayments.length / 5) || 1);
     }
 
+    const areRentPaymentsInitiated = () => editedRentPayments.length > 0;
     const initiateButtonDisabled = () => !(rentPeriodInput > 0 && rentPaymentsPerYearInput > 0);
-
 
     const handleRentAdvanceChange = (oldValue: any, newValue: any) => {
         if (isNaN(parseFloat(newValue))) {
@@ -1159,6 +1184,7 @@ export default function Table() {
                                 precision={2}
                                 hideControls
                                 className="w-24"
+                                disabled={areRentPaymentsInitiated()}
                             />
                         </div>
                         <div className="flex flex-row items-center mb-4">
